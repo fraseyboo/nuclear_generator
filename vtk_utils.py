@@ -324,7 +324,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=True):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=False):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
