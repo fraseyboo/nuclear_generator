@@ -12,19 +12,8 @@ import mpl_utils
 import physics_utils
 
 import matplotlib
-if matplotlib.pyplot.get_backend() == 'Qt5Agg':
-    try:
-        matplotlib.use('GTK3Agg')
-        print('backend set to GTK3Agg to avoid conflict with VTK plot')
-    except:
-        print('Tried to switch to GTK3, failed')
-        print('Currently using:', matplotlib.get_backend())
 
-
-
-
-
-def main(frontend='mpl'):
+def main(frontend='vtk'):
 
 	# Make mesh of thetas and phis
 	phi, theta = np.mgrid[0:2*np.pi:50j, 0:np.pi:50j]

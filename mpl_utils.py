@@ -123,8 +123,6 @@ def matplotlib_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
 
 		vtk_utils.write_gltf(render_window)
 
-
-
 	# Update plot when slider is changed
 	sA.on_changed(update)
 	sB2.on_changed(update)

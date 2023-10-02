@@ -213,7 +213,6 @@ def add_sliders(interactor, renderer, theta):
     sw_p.p1 = sw_p.p1 + np.asarray([0.2, 0])
     sw_p.p2 = sw_p.p1 + np.asarray([sw_p.tube_length, 0])
 
-
     sw_p.title = 'Beta 2'
     beta_2_slider = make_slider(sw_p)
     beta_2_slider.SetInteractor(interactor)
@@ -470,6 +469,10 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         # print(current_actors.GetItemAsObject(0))
         slider = add_sliders(renderWindowInteractor, renderer, theta)
 
+    cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
+    cam_orient_manipulator.SetParentRenderer(renderer)
+    # Enable the widget.
+    cam_orient_manipulator.On()
 
     renderWindow.SetWindowName('Nuclear Fruit Bowl: Shape Generator')
     renderWindow.SetSize(window_size)
@@ -992,7 +995,7 @@ def add_2D_function(function_values, x_range=[0,1], y_range=[0,1], scale=1, scal
 
     x = x_steps.flatten()
     y = y_steps.flatten()
-    z = function_values.flatten()
+    z = function_values.flatten() * scale
 
     locs = np.asarray([x, y, z]).T
     surface = add_polyhedron(locs, triangles, scalars=z, opacity=1.0, color_map='jet', offset=offset)
@@ -1099,32 +1102,31 @@ def add_spherical_function(function_values, secondary_scalars=None, radius=1, sc
 if __name__ == "__main__":
 
     # Create a sphere
-    x_granularity = 101
-    y_granularity = 101
 
-    r = 1
+    # Make mesh of thetas and phis
+    phi, theta = np.mgrid[0:2*np.pi:50j, 0:np.pi:50j]
 
-    phi, theta = np.mgrid[0:np.pi:(x_granularity)*1j, 0:2 * np.pi:(y_granularity)*1j]
-    polar_matrix = (sph_harm(3, 4, theta, phi).real + 1 )/2
+    # initialise deformations for a spherical nucleus with mass A=100
+    beta2 = 0.5
+    beta3 = 0
+    beta4 = 0
+    A = 100
 
+    m2 = 0
+    m3 = 0
+    m4 = 0
 
-    actor_dict = dict()
-
-    s = sph_harm(1, 4, theta, phi).real
+    r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
 
     # # print(s)
-    sp_function = add_spherical_function(polar_matrix, scale_mesh=True, absolute_displacement=True, add_gridlines=True)
+    sp_function = add_spherical_function(r, scale_mesh=True, absolute_displacement=True, add_gridlines=True)
 
-    # sp_function = add_spherical_function(polar_matrix, secondary_scalars=s, scale_mesh=True, absolute_displacement=False, add_gridlines=False, mesh_color='black')
-
-    td_function = add_2D_function(s, scale_mesh=False, absolute_displacement=True, add_gridlines=True, verbose=False, offset=[1,-0.5,0])
-
+    td_function = add_2D_function(r, scale_mesh=False, absolute_displacement=True, x_range=[0,10], y_range=[0,10], add_gridlines=True, verbose=False, offset=[8,-5,-55], scale=10, mesh_color='black')
+    actor_dict = dict()
 
     actor_dict.update({'spherical_function': sp_function})
     actor_dict.update({'2D_function': td_function})
 
-    # actor_dict.update({'<points': vtk_utils.add_polydata(points, glyph_scale=1, glyph_type='sphere')})
 
     render(actors=actor_dict)
-    # qt_utils.render_data(actor_dict=actor_dict)
 
