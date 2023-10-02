@@ -185,9 +185,9 @@ def main():
 		actor_dict = dict()
 		actor_dict.update({'shape': nuclear_shape})
 
-		a,b,c = vtk_utils.render(actors=actor_dict)
+		render_window = vtk_utils.render(actors=actor_dict)
 
-		vtk_utils.write_gltf(b)
+		vtk_utils.write_gltf(render_window)
 
 
 
