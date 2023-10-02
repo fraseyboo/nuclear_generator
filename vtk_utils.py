@@ -351,10 +351,13 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
 
         if use_PBR:
             cube_path = 'cubemap'
-
-            cubemap = ReadCubeMap(cube_path, '/', '.png', 2)
-            renderer.UseImageBasedLightingOn()
-            renderer.SetEnvironmentTexture(cubemap, True)
+            if os.path.exists(cube_path + os.sep + 'nx.png'):
+                cubemap = ReadCubeMap(cube_path, '/', '.png', 2)
+                renderer.UseImageBasedLightingOn()
+                renderer.SetEnvironmentTexture(cubemap, True)
+            else:
+                print('Could not find cubemap')
+                use_PBR = False
             # renderer.SetEnvironmentCubeMap(cubemap)
 
         # if add_skybox:
