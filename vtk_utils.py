@@ -10,6 +10,19 @@ import LUT_utils
 import interactor_utils
 import physics_utils
 
+def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
+
+    r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
+
+    nuclear_shape = add_spherical_function(r, add_gridlines=False)
+
+    actor_dict = dict()
+    actor_dict.update({'shape': nuclear_shape})
+    
+    render_window = render(actors=actor_dict)
+
+    return render_window
+
 def write_gltf(source, savename='nuclear_shape.gltf', verbose=True):
 
     if verbose:
@@ -785,7 +798,7 @@ def make_axes(source_object=None,
         # polaxes.SetCenterStickyAxes(False)
         return polaxes
 
-def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True):
+def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, generate_normals=False, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True):
 
     colors = vtk.vtkNamedColors()
 
@@ -848,17 +861,20 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
     polydata.SetPoints(points)
     polydata.SetPolys(cell_array)
 
-    normal_filter = vtk.vtkPolyDataNormals()
-    normal_filter.SetInputData(polydata)
-    normal_filter.Update()
+    if generate_normals:
+        normal_filter = vtk.vtkPolyDataNormals()
+        normal_filter.SetInputData(polydata)
+        normal_filter.Update()
 
     if original_actor is None:
 
         # print(normal_filter.GetOutput(), scalars.shape)
         # Create a mapper and actor
         mapper = vtk.vtkDataSetMapper()
-        mapper.SetInputData(normal_filter.GetOutput())
-        # mapper.SetInputData(polydata)
+        if generate_normals:
+            mapper.SetInputData(normal_filter.GetOutput())
+        else:
+            mapper.SetInputData(polydata)
 
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
@@ -896,13 +912,14 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
 
     else:
 
-        normal_filter = vtk.vtkPolyDataNormals()
-        normal_filter.SetInputData(polydata)
-        normal_filter.Update()
+        if generate_normals:
+            normal_filter = vtk.vtkPolyDataNormals()
+            normal_filter.SetInputData(polydata)
+            normal_filter.Update()
+            original_actor.GetMapper().SetInputData(normal_filter.GetOutput())
 
-        original_actor.GetMapper().SetInputData(normal_filter.GetOutput())
-
-        # original_actor.GetMapper().SetInputData(polydata)
+        else:
+            original_actor.GetMapper().SetInputData(polydata)
 
         
 
