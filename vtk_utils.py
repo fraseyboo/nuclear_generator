@@ -2,6 +2,8 @@ import numpy as np
 from scipy.special import sph_harm
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
+import sys
+import os
 
 import vtk
 import LUT_utils
@@ -24,6 +26,54 @@ def write_gltf(source, savename='nuclear_shape.gltf', verbose=True):
     if verbose:
         print('File written')
 
+
+def ReadCubeMap(folderRoot, fileRoot, ext, key):
+    """
+    Read the cube map.
+    :param folderRoot: The folder where the cube maps are stored.
+    :param fileRoot: The root of the individual cube map file names.
+    :param ext: The extension of the cube map files.
+    :param key: The key to data used to build the full file name.
+    :return: The cubemap texture.
+    """
+    # A map of cube map naming conventions and the corresponding file name
+    # components.
+    fileNames = {
+        0: ['right', 'left', 'top', 'bottom', 'front', 'back'],
+        1: ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'],
+        2: ['px', 'nx', 'py', 'ny', 'pz', 'nz'],
+        3: ['0', '1', '2', '3', '4', '5']}
+    if key in fileNames:
+        fns = fileNames[key]
+    else:
+        print('ReadCubeMap(): invalid key, unable to continue.')
+        sys.exit()
+    texture = vtk.vtkTexture()
+    texture.CubeMapOn()
+    texture.MipmapOn()
+    texture.InterpolateOn()
+    # Build the file names.
+    for i in range(0, len(fns)):
+        fns[i] = folderRoot + fileRoot + fns[i] + ext
+        if not os.path.isfile(fns[i]):
+            print('Nonexistent texture file:', fns[i])
+            return texture
+    i = 0
+    for fn in fns:
+        # Read the images
+        readerFactory = vtk.vtkImageReader2Factory()
+        imgReader = readerFactory.CreateImageReader2(fn)
+        imgReader.SetFileName(fn)
+
+        flip = vtk.vtkImageFlip()
+        flip.SetInputConnection(imgReader.GetOutputPort())
+        flip.SetFilteredAxis(1)  # flip y axis
+        texture.SetInputConnection(i, flip.GetOutputPort(0))
+        i += 1
+    return texture
+
+
+
 class SliderProperties:
     tube_width = 0.005
     slider_length = 0.01
@@ -33,8 +83,8 @@ class SliderProperties:
     title_height = 0.025
     label_height = 0.020
 
-    minimum_value = -10.0
-    maximum_value = 10.0
+    minimum_value = -2.0
+    maximum_value = 2.0
     initial_value = 0.0
     tube_length = 0.18
 
@@ -256,7 +306,25 @@ def add_sliders(interactor, renderer, theta):
 
 
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None):
+def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
+
+    try:
+        if verbose:
+            print('Adding PBR')
+        actor.GetProperty().SetMetallic(metallic_factor)
+        actor.GetProperty().SetRoughness(roughness_factor)
+        actor.GetProperty().SetInterpolationToPBR()
+
+        # actor.GetProperty().SetORMTexture(ormTexture)
+        actor.GetProperty().SetOcclusionStrength(1)
+    except Exception as e: 
+        print(e)
+        print('Failed to add PRB to actor')
+        return actor
+
+    return actor
+
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=True):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -281,12 +349,36 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         renderer.SetUseDepthPeeling(1)
         renderer.SetMaximumNumberOfPeels(10)
 
+        if use_PBR:
+            cube_path = 'cubemap'
+
+            cubemap = ReadCubeMap(cube_path, '/', '.png', 2)
+            renderer.UseImageBasedLightingOn()
+            renderer.SetEnvironmentTexture(cubemap, True)
+            # renderer.SetEnvironmentCubeMap(cubemap)
+
+        # if add_skybox:
+        #     skybox = ReadCubeMap(cube_path, '/', '.png', 2)
+        #     # skybox = ReadCubeMap(cube_path, '/skybox', '.jpg', 2)
+        #     skybox.InterpolateOn()
+        #     skybox.RepeatOff()
+        #     skybox.EdgeClampOn()
+
+        #     skyboxActor = vtk.vtkSkybox()
+        #     skyboxActor.SetTexture(skybox)
+        #     renderer.AddActor(skyboxActor)
+
+
+
 
         if actors is not None:
             if isinstance(actors, list):
                 # print('List of actors supplied, adding list')
                 for actor in actors:
-                    renderer.AddActor(actor)
+                    if use_PBR:
+                        renderer.AddActor(add_PBR(actor))
+                    else:
+                        renderer.AddActor(actor)
                     if add_axes:
                         axes = make_axes(actor, renderer)
                         renderer.AddActor(axes)
@@ -296,37 +388,55 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                 for actor in actors.values():
                     if isinstance(actor, list):
                         for sub_actor in actor:
-                            renderer.AddActor(sub_actor)
+                            if use_PBR:
+                                renderer.AddActor(add_PBR(sub_actor))
+                            else:
+                                renderer.AddActor(sub_actor)
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                     elif type(actor) is list:
                         for sub_actor in actor:
-                            renderer.AddActor(sub_actor)
+                            if use_PBR:
+                                renderer.AddActor(add_PBR(sub_actor))
+                            else:
+                                renderer.AddActor(sub_actor)
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                     elif isinstance(actor, dict):
                         for sub_actor in actor.values():
-                            renderer.AddActor(sub_actor)
+                            if use_PBR:
+                                renderer.AddActor(add_PBR(sub_actor))
+                            else:
+                                renderer.AddActor(sub_actor)
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                     elif isinstance(actor, tuple):
                         for sub_actor in actor:
-                            renderer.AddActor(sub_actor)
+                            if use_PBR:
+                                renderer.AddActor(add_PBR(sub_actor))
+                            else:
+                                renderer.AddActor(sub_actor)
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
 
                     else:
-                        renderer.AddActor(actor)
+                        if use_PBR:
+                            renderer.AddActor(add_PBR(actor))
+                        else:
+                            renderer.AddActor(actor)
                         if add_axes:
                             axes = make_axes(actor, renderer)
                             renderer.AddActor(axes)
 
         else:
-            renderer.AddActor(actors)
+            if use_PBR:
+                renderer.AddActor(add_PBR(actors))
+            else:
+                renderer.AddActor(actors)
             if add_axes:
                 axes = make_axes(actors, renderer)
                 renderer.AddActor(axes)
@@ -735,17 +845,17 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
     polydata.SetPoints(points)
     polydata.SetPolys(cell_array)
 
-    # normal_filter = vtk.vtkPolyDataNormals()
-    # normal_filter.SetInputData(polydata)
-    # normal_filter.Update()
+    normal_filter = vtk.vtkPolyDataNormals()
+    normal_filter.SetInputData(polydata)
+    normal_filter.Update()
 
     if original_actor is None:
 
         # print(normal_filter.GetOutput(), scalars.shape)
         # Create a mapper and actor
         mapper = vtk.vtkDataSetMapper()
-        # mapper.SetInputData(normal_filter.GetOutput())
-        mapper.SetInputData(polydata)
+        mapper.SetInputData(normal_filter.GetOutput())
+        # mapper.SetInputData(polydata)
 
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
@@ -783,7 +893,15 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
 
     else:
 
-        original_actor.GetMapper().SetInputData(polydata)
+        normal_filter = vtk.vtkPolyDataNormals()
+        normal_filter.SetInputData(polydata)
+        normal_filter.Update()
+
+        original_actor.GetMapper().SetInputData(normal_filter.GetOutput())
+
+        # original_actor.GetMapper().SetInputData(polydata)
+
+        
 
         if scalars is not None:
 
