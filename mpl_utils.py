@@ -6,6 +6,18 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.widgets import Slider, Button, RadioButtons
 from matplotlib import cm, colors
 
+import matplotlib
+
+try:
+    matplotlib.rcParams.update({
+        "pgf.texsystem": "pdflatex",
+        'font.family': 'serif',
+        'text.usetex': True,
+        'pgf.rcfonts': False,
+    })
+except:
+    print('Could not Latex-ify labels ')
+
 import physics_utils
 import vtk_utils
 
@@ -66,6 +78,9 @@ def matplotlib_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
     exportax = plt.axes([0.9, 0.025, 0.1, 0.04])
     export_button = Button(exportax, 'Export', color=axcolor, hovercolor='0.975')
 
+    renderax = plt.axes([0.7, 0.025, 0.1, 0.04])
+    render_button = Button(renderax, 'Render', color=axcolor, hovercolor='0.975')
+
     # Define function for updating plot when changing sliders
     def update(val):
         A = sA.val
@@ -99,6 +114,42 @@ def matplotlib_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
         sB2.reset()
         sB3.reset()
         sB4.reset()
+
+    def mpl_render(event):
+
+        A = sA.val
+        beta2 = sB2.val
+        beta3 = sB3.val
+        beta4 = sB4.val
+        m2 = sM2.val
+        m3 = sM3.val
+        m4 = sM4.val
+
+
+        r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
+
+        x = physics_utils._x(r, theta, phi)
+        y = physics_utils._y(r, theta, phi)
+        z = physics_utils._z(r, theta)
+        
+        R = physics_utils._R(x, y, z)
+        N = R/R.max()
+
+        ax = plt.figure(figsize=(12,12)).add_subplot(projection='3d')
+        # fig, ax = plt.subplots(subplot_kw=dict(projection='3d'), figsize=(6,5))
+        plt.subplots_adjust(bottom=0.0, top=0.99)
+        im = ax.plot_surface(x, y, z, rstride=1, cstride=1, facecolors=cm.jet(N), shade=True)
+
+        ax.axes.set_xlim3d(  left=-1*limAxis, right=limAxis) 
+        ax.axes.set_ylim3d(bottom=-1*limAxis,   top=limAxis) 
+        ax.axes.set_zlim3d(bottom=-1*limAxis,   top=limAxis)
+
+        plt.tight_layout()
+
+        plt.show()
+
+        # fig.canvas.draw_idle()
+
 
 
     def vtk_export(event):
@@ -136,6 +187,7 @@ def matplotlib_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
     sM4.on_changed(update)
 
     reset_button.on_clicked(reset)
+    render_button.on_clicked(mpl_render)
     export_button.on_clicked(vtk_export)
 
     plt.show()

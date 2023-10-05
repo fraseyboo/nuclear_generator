@@ -45,6 +45,104 @@ def write_gltf(source, savename='nuclear_shape.gltf', verbose=True):
         print('File written')
 
 
+
+def colorbar(actor,
+            interactor=None,
+            title='Radius',
+            orientation='vertical',
+            return_widget=True,
+            total_ticks=10,
+            background=True,
+            opacity=1.0):
+    """[Adds a colorbar to the interactor]
+
+    Arguments:
+        interactor {[VTK Interactor]} -- [the interactor used by VTK]
+        title {[string]} -- [the title of the colorbar]
+        mapper {[VTK mapper]} -- [the VTK mapper used to grab color values]
+
+    Keyword Arguments:
+        orientation {str} -- [orientation of the colorbar] (default: {'vertical'})
+        return_widget {bool} -- [returns the colorbar as a widget instead] (default: {True})
+
+    Returns:
+        [type] -- [description]
+    """
+    print('adding colorbar')
+
+    if type(actor) == vtk.vtkScalarBarActor:
+
+        scalar_bar = actor
+
+    else:
+
+        scalar_bar = vtk.vtkScalarBarActor()
+        scalar_bar.SetLookupTable(actor.GetMapper().GetLookupTable())
+
+        # print(scalar_bar)
+
+        # print(sorted(dir(scalar_bar)))
+
+        scalar_bar.GetLabelTextProperty().SetColor(0.0, 0.0, 0.0)
+        scalar_bar.GetLabelTextProperty().SetFontFamilyToArial()
+        scalar_bar.GetLabelTextProperty().ItalicOff()
+        # scalar_bar.GetLabelTextProperty().ShadowOff()
+        # scalar_bar.GetLabelTextProperty().FrameOn()
+        scalar_bar.GetLabelTextProperty().SetShadowOffset(0,0)
+        scalar_bar.GetLabelTextProperty().GetShadowColor((1,1,1))#.SetValue(1,1,1)
+        # scalar_bar.GetLabelTextProperty().SetBackgroundOpacity(0.5)
+        # scalar_bar.GetLabelTextProperty().SetBackgroundColor(1.0, 1.0, 1.0)
+        # print('SHADOW', scalar_bar.GetLabelTextProperty().GetShadow())
+
+        scalar_bar.SetTitle(title)
+        scalar_bar.GetTitleTextProperty().SetColor(0.0, 0.0, 0.0)
+        # scalar_bar.SetUnconstrainedFontSize(40)
+        scalar_bar.GetTitleTextProperty().SetFontFamilyToArial()
+        scalar_bar.GetTitleTextProperty().ShadowOff()
+        scalar_bar.GetTitleTextProperty().ItalicOff()
+        scalar_bar.AnnotationTextScalingOn()
+        scalar_bar.SetVerticalTitleSeparation(10)
+        scalar_bar.UseOpacityOff()
+
+        scalar_bar.Modified()
+
+        # print(dir(scalar_bar))
+        if orientation == 'Horizontal':
+            scalar_bar.SetOrientationToHorizontal()
+        else:
+            scalar_bar.SetOrientationToVertical()
+        scalar_bar.SetWidth(0.1)
+        # scalar_bar.SetHeight(0.1)
+        scalar_bar.SetVisibility(1)
+        scalar_bar.SetNumberOfLabels(total_ticks)
+        scalar_bar.UseOpacityOn()
+        if background:
+            scalar_bar.DrawBackgroundOn()
+            scalar_bar.GetBackgroundProperty().SetOpacity(opacity)
+        # scalar_bar.SetWidth(10)
+        scalar_bar.SetBarRatio(0.85)
+
+
+    # create the scalar_bar_widget
+    if return_widget:
+
+        global scalar_bar_widget
+
+        scalar_bar_widget = vtk.vtkScalarBarWidget()
+        scalar_bar_widget.SetInteractor(interactor)
+        scalar_bar_widget.SetScalarBarActor(scalar_bar)
+        scalar_bar_widget.On()
+        scalar_bar_widget.ResizableOn()
+
+
+        # print(scalar_bar, scalar_bar_widget)
+
+        return scalar_bar_widget
+
+    return scalar_bar
+
+
+
 def ReadCubeMap(folderRoot, fileRoot, ext, key):
     """
     Read the cube map.
@@ -101,8 +199,8 @@ class SliderProperties:
     title_height = 0.025
     label_height = 0.020
 
-    minimum_value = -2.0
-    maximum_value = 2.0
+    minimum_value = -3.0
+    maximum_value = 3.0
     initial_value = 0.0
     tube_length = 0.18
 
@@ -119,8 +217,10 @@ class SliderProperties:
     bar_color = 'DarkSlateGray'
     bar_ends_color = 'Black'
 
+    initial_values=None
 
-def make_slider(properties):
+
+def make_slider(properties, slider_name=None):
 
     colors = vtk.vtkNamedColors()
 
@@ -144,6 +244,8 @@ def make_slider(properties):
     slider.SetTitleHeight(properties.title_height)
     slider.SetLabelHeight(properties.label_height)
 
+
+
     # Set the color properties
     # Change the color of the title.
     slider.GetTitleProperty().SetColor(colors.GetColor3d(properties.title_color))
@@ -162,6 +264,11 @@ def make_slider(properties):
 
     slider_widget = vtk.vtkSliderWidget()
     slider_widget.SetRepresentation(slider)
+
+    if slider_name is None:
+            slider_name = 'slider-%i' % np.random.randint(10000,9000000)
+    # print(dir(slider_widget))
+    slider_widget.SetObjectName(slider_name)
 
     return slider_widget
 
@@ -199,6 +306,7 @@ class SliderCallback:
         total_actors = actors.GetNumberOfItems()
         for j in range(total_actors):
             actor = actors.GetNextActor()
+            # print(type(actor), total_actors)
             if isinstance(actor, vtk.vtkOpenGLActor):
                 source_actor = actor
             if source_actor is not None:
@@ -206,8 +314,16 @@ class SliderCallback:
                     actor.SetBounds(source_actor.GetBounds())
         renderer.Modified()
 
+        scalar_bar_widget.GetScalarBarActor().SetLookupTable(source_actor.GetMapper().GetLookupTable())
+        # .Modified()
+        scalar_bar_widget.Modified()
 
-def button_callback(widget, event):
+        print(dir(scalar_bar_widget))
+
+
+
+
+def export_button_callback(widget, event):
     value = widget.GetRepresentation().GetState()
     renwin = widget.GetCurrentRenderer().GetRenderWindow()
   
@@ -215,8 +331,42 @@ def button_callback(widget, event):
     write_gltf(renwin)
     return
 
+def reset_button_callback(widget, event):
+    value = widget.GetRepresentation().GetState()
+    # renwin = widget.GetCurrentRenderer().GetRenderWindow()
+    # renderers = renwin.GetRenderers()
+    # renderers.InitializeObjectBase()
+    # renderers.InitTraversal()
 
-def add_button(interactor, renderer):
+    # for i in range(renderers.GetNumberOfItems()):
+    #     renderer = renderers.GetNextItem()
+
+    #     actors = renderer.GetActors()
+    #     actors.InitializeObjectBase()
+    #     actors.InitTraversal()
+
+    #     total_actors = actors.GetNumberOfItems()
+
+    #     for j in range(total_actors):
+
+    #         actor = actors.GetNextActor()
+    #         print(type(actor), actor.GetObjectName())
+
+    #     # print(renderer)
+
+    print(dir(widget))
+
+    interactor = widget.GetInteractor()
+
+    print(dir(interactor))
+
+  
+    # print("Button pressed!", value)
+    reset_sliders(renderer)
+    return
+
+
+def add_export_button(interactor, renderer):
 
     r1 = vtk.vtkPNGReader()
     r1.SetFileName('icons/save.png')
@@ -256,11 +406,65 @@ def add_button(interactor, renderer):
     buttonRepresentation.SetPlaceFactor(1)
     buttonRepresentation.PlaceWidget(bds)
 
-    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, button_callback)
+    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, export_button_callback)
 
     buttonWidget.On()
 
     return buttonWidget
+
+
+def add_reset_button(interactor, renderer):
+
+    r1 = vtk.vtkPNGReader()
+    r1.SetFileName('icons/reset.png')
+    r1.Update()
+
+
+    r2 = vtk.vtkPNGReader()
+    r2.SetFileName('icons/reset.png')
+    r2.Update()
+
+    buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D() 
+    buttonRepresentation.SetNumberOfStates(2)
+
+    buttonRepresentation.SetButtonTexture(0, r1.GetOutput())
+    buttonRepresentation.SetButtonTexture(1, r2.GetOutput())
+
+    buttonWidget =   vtk.vtkButtonWidget()
+    buttonWidget.SetInteractor(interactor)
+    buttonWidget.SetRepresentation(buttonRepresentation)
+
+    # // Place the widget. Must be done after a render so that the
+    # // viewport is defined..
+    # // Here the widget placement is in normalized display coordinates.
+    upperRight = vtk.vtkCoordinate()
+    upperRight.SetCoordinateSystemToNormalizedDisplay()
+    upperRight.SetValue(0.05, 0.1)
+
+    bds = np.zeros(6)
+    sz = 50.0
+    bds[0] = upperRight.GetComputedDisplayValue(renderer)[0] - sz
+    bds[1] = bds[0] + sz
+    bds[2] = upperRight.GetComputedDisplayValue(renderer)[1] - sz
+    bds[3] = bds[2] + sz
+    bds[4] = bds[5] = 0.0
+
+    # // Scale to 1, default is .5
+    buttonRepresentation.SetPlaceFactor(1)
+    buttonRepresentation.PlaceWidget(bds)
+
+    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, reset_button_callback)
+
+    buttonWidget.On()
+
+    return buttonWidget
+
+def reset_sliders(renderer):
+
+    actors = renderer.GetActors()
+
+    print(actors)
+
 
 
 def add_sliders(interactor, renderer, initial_values=None):
@@ -270,6 +474,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     sliders = dict()
 
     sw_p = SliderProperties()
+    sw_p.initial_values = initial_values
 
     sw_p.p1 = sw_p.p1 + np.asarray([0.05, 0])
     sw_p.p2 = sw_p.p1 + np.asarray([sw_p.tube_length, 0])
@@ -439,7 +644,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=True, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, add_colorbar=True, theta=None, use_PBR=False, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -519,9 +724,12 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                     if add_axes:
                         axes = make_axes(actor, renderer)
                         renderer.AddActor(axes)
+                    if add_colorbar:
+                        cb = colorbar(actor, interactor=renderWindowInteractor)
+                        # renderer.AddActor(cb)
 
             elif isinstance(actors, dict):
-                # print('List of actors supplied, adding list')
+                print('Dict of actors supplied, adding Dict')
                 for actor in actors.values():
                     if isinstance(actor, list):
                         for sub_actor in actor:
@@ -532,6 +740,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
+                            if add_colorbar:
+                                cb = colorbar(sub_actor, interactor=renderWindowInteractor)
+                                # renderer.AddActor(cb)
                     elif type(actor) is list:
                         for sub_actor in actor:
                             if use_PBR:
@@ -541,6 +752,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
+                            if add_colorbar:
+                                cb = colorbar(sub_actor, interactor=renderWindowInteractor)
+                                # renderer.AddActor(cb)
                     elif isinstance(actor, dict):
                         for sub_actor in actor.values():
                             if use_PBR:
@@ -550,6 +764,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
+                            if add_colorbar:
+                                cb = colorbar(sub_actor, interactor=renderWindowInteractor)
+                                # renderer.AddActor(cb)
                     elif isinstance(actor, tuple):
                         for sub_actor in actor:
                             if use_PBR:
@@ -559,6 +776,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                             if add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
+                            if add_colorbar:
+                                cb = colorbar(sub_actor, interactor=renderWindowInteractor)
+                                # renderer.AddActor(cb)
 
                     else:
                         if use_PBR:
@@ -568,6 +788,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                         if add_axes:
                             axes = make_axes(actor, renderer)
                             renderer.AddActor(axes)
+                        if add_colorbar:
+                            cb = colorbar(actor, interactor=renderWindowInteractor)
+                            # renderer.AddActor(cb)
 
         else:
             if use_PBR:
@@ -577,6 +800,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
             if add_axes:
                 axes = make_axes(actors, renderer)
                 renderer.AddActor(axes)
+            if add_colorbar:
+                cb = colorbar(actor)
+                renderer.AddActor(cb)
 
 
         renderer.ResetCamera()
@@ -591,17 +817,19 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         # print(current_actors.GetItemAsObject(0))
         slider = add_sliders(renderWindowInteractor, renderer, initial_values=initial_values)
 
-    cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
-    cam_orient_manipulator.SetParentRenderer(renderer)
-    # Enable the widget.
-    cam_orient_manipulator.On()
+    # cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
+    # cam_orient_manipulator.SetParentRenderer(renderer)
+    # # Enable the widget.
+    # cam_orient_manipulator.On()
 
     renderWindow.SetWindowName('Nuclear Fruit Bowl: Shape Generator')
     renderWindow.SetSize(window_size)
     renderWindow.Render()
 
-    button = add_button(renderWindowInteractor, renderer)
-    button.On()
+    export_button = add_export_button(renderWindowInteractor, renderer)
+    export_button.On()
+    reset_button = add_reset_button(renderWindowInteractor, renderer)
+    reset_button.On()
 
     # cube = interactor_utils.add_indicator_cube(renderWindowInteractor)
     renderWindowInteractor.Start()
