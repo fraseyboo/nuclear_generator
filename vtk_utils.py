@@ -14,12 +14,16 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
 
     r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
 
+    initial_values=dict()
+    initial_values.update({'A':A, 'b2':beta2, 'b3':beta3, 'b4':beta4, 'm2':m2, 'm3':m3, 'm4':m4})
+
+
     nuclear_shape = add_spherical_function(r, add_gridlines=False)
 
     actor_dict = dict()
     actor_dict.update({'shape': nuclear_shape})
     
-    render_window = render(actors=actor_dict)
+    render_window = render(actors=actor_dict, initial_values=initial_values)
 
     return render_window
 
@@ -186,7 +190,7 @@ class SliderCallback:
         add_spherical_function(r, add_gridlines=False, original_actor=old_shape)
         renderer.Modified()
 
-def add_sliders(interactor, renderer, theta):
+def add_sliders(interactor, renderer, initial_values=None):
 
     global sliders
 
@@ -197,15 +201,18 @@ def add_sliders(interactor, renderer, theta):
     sw_p.title = 'A'
     sw_p.minimum_value = 1
     sw_p.maximum_value = 250
-    sw_p.initial_value = 100
+    if initial_values is not None:
+        sw_p.initial_value = initial_values.get('A', 100)
+    else:
+        sw_p.initial_value = 100
 
     a_slider = make_slider(sw_p)
     a_slider.SetInteractor(interactor)
     a_slider.SetAnimationModeToAnimate()
     a_slider.EnabledOn()
     a_slider.SetCurrentRenderer(renderer)
-    beta_1_slider_cb = SliderCallback(sw_p.initial_value)
-    a_slider.AddObserver(vtk.vtkCommand.InteractionEvent, beta_1_slider_cb)
+    a_slider_cb = SliderCallback(sw_p.initial_value)
+    a_slider.AddObserver(vtk.vtkCommand.InteractionEvent, a_slider_cb)
     sliders.update({sw_p.title: a_slider})
 
     sw_p = SliderProperties()
@@ -214,6 +221,10 @@ def add_sliders(interactor, renderer, theta):
     sw_p.p2 = sw_p.p1 + np.asarray([sw_p.tube_length, 0])
 
     sw_p.title = 'Beta 2'
+    if initial_values is not None:
+        sw_p.initial_value = initial_values.get('b2', 0)
+    else:
+        sw_p.initial_value = 0
     beta_2_slider = make_slider(sw_p)
     beta_2_slider.SetInteractor(interactor)
     beta_2_slider.SetAnimationModeToAnimate()
@@ -227,6 +238,10 @@ def add_sliders(interactor, renderer, theta):
     sw_p.p2 = sw_p.p1 + np.asarray([sw_p.tube_length, 0])
 
     sw_p.title = 'Beta 3'
+    if initial_values is not None:
+        sw_p.initial_value = initial_values.get('b3', 0)
+    else:
+        sw_p.initial_value = 0
     beta_3_slider = make_slider(sw_p)
     beta_3_slider.SetInteractor(interactor)
     beta_3_slider.SetAnimationModeToAnimate()
@@ -241,6 +256,10 @@ def add_sliders(interactor, renderer, theta):
 
 
     sw_p.title = 'Beta 4'
+    if initial_values is not None:
+        sw_p.initial_value = initial_values.get('b4', 0)
+    else:
+        sw_p.initial_value = 0
     beta_4_slider = make_slider(sw_p)
     beta_4_slider.SetInteractor(interactor)
     beta_4_slider.SetAnimationModeToAnimate()
@@ -264,7 +283,12 @@ def add_sliders(interactor, renderer, theta):
     sw_p.title = 'm2'
     sw_p.minimum_value = -2
     sw_p.maximum_value = 2
-    sw_p.initial_value = 0
+
+    
+    if initial_values is not None:
+        sw_p.initial_value = initial_values.get('m2', 0)
+    else:
+        sw_p.initial_value = 0
 
     m2_slider = make_slider(sw_p)
     m2_slider.SetInteractor(interactor)
@@ -283,7 +307,10 @@ def add_sliders(interactor, renderer, theta):
     sw_p.title = 'm3'
     sw_p.minimum_value = -3
     sw_p.maximum_value = 3
-    sw_p.initial_value = 0
+    if initial_values is not None:
+        sw_p.initial_value = initial_values.get('m3', 0)
+    else:
+        sw_p.initial_value = 0
 
     m3_slider = make_slider(sw_p)
     m3_slider.SetInteractor(interactor)
@@ -301,7 +328,10 @@ def add_sliders(interactor, renderer, theta):
     sw_p.title = 'm4'
     sw_p.minimum_value = -4
     sw_p.maximum_value = 4
-    sw_p.initial_value = 0
+    if initial_values is not None:
+        sw_p.initial_value = initial_values.get('m4', 0)
+    else:
+        sw_p.initial_value = 0
 
     m4_slider = make_slider(sw_p)
     m4_slider.SetInteractor(interactor)
@@ -312,10 +342,7 @@ def add_sliders(interactor, renderer, theta):
     m4_slider.AddObserver(vtk.vtkCommand.InteractionEvent, m4_slider_cb)
     sliders.update({sw_p.title: m4_slider})
 
-
-
     return sliders
-
 
 
 def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
@@ -336,7 +363,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=False):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=False, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -467,7 +494,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         # print(dir(current_actors))
 
         # print(current_actors.GetItemAsObject(0))
-        slider = add_sliders(renderWindowInteractor, renderer, theta)
+        slider = add_sliders(renderWindowInteractor, renderer, initial_values=initial_values)
 
     cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
     cam_orient_manipulator.SetParentRenderer(renderer)
@@ -1118,6 +1145,9 @@ if __name__ == "__main__":
 
     r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
 
+    initial_values=dict()
+    initial_values.update({'A':A, 'b2':beta2, 'b3':beta3, 'b4':beta4, 'm2':m2, 'm3':m3, 'm4':m4})
+
     # # print(s)
     sp_function = add_spherical_function(r, scale_mesh=True, absolute_displacement=True, add_gridlines=True)
 
@@ -1128,5 +1158,5 @@ if __name__ == "__main__":
     actor_dict.update({'2D_function': td_function})
 
 
-    render(actors=actor_dict)
+    render(actors=actor_dict, initial_values=initial_values)
 
