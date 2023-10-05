@@ -25,7 +25,7 @@ def main(frontend='vtk'):
 		mpl_utils.matplotlib_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi)
 	elif frontend == 'vtk':
 		render_window = vtk_utils.vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi)
-		vtk_utils.write_gltf(render_window)
+		# vtk_utils.write_gltf(render_window)
 		
 if __name__ == '__main__':
 	main(frontend='vtk')
