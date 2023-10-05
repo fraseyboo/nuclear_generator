@@ -23,6 +23,10 @@ Gridlines can be enabled to produce high-resolution raster images
 
 ![Screenshot](plots/octupole.png)
 
+Normals are generated allowing for physically-based rendering, cubemaps are supported to do complex reflections
+
+![Screenshot](plots/pbr.png)
+
 Direct exporting to Blender allows for more advanced rendering:
 
 ![Screenshot](plots/glass_render_3.png)
