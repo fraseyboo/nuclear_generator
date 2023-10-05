@@ -277,7 +277,7 @@ def add_sliders(interactor, renderer, initial_values=None):
 
     sw_p = SliderProperties()
 
-    sw_p.p1 = sw_p.p1 + np.asarray([0.2, 0])
+    sw_p.p1 = sw_p.p1 + np.asarray([0.25, 0])
     sw_p.p2 = sw_p.p1 + np.asarray([sw_p.tube_length, 0])
 
     sw_p.title = 'Beta 2'
