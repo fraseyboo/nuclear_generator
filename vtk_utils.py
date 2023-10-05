@@ -202,8 +202,6 @@ def button_callback(widget, event):
 
 def add_button(interactor, renderer):
 
-    print('adding button')
-
     r1 = vtk.vtkPNGReader()
     r1.SetFileName('icons/save.png')
     r1.Update()
@@ -569,8 +567,6 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
 
     button = add_button(renderWindowInteractor, renderer)
     button.On()
-
-    print(button)
 
     # cube = interactor_utils.add_indicator_cube(renderWindowInteractor)
     renderWindowInteractor.Start()
