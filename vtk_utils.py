@@ -37,6 +37,7 @@ def write_gltf(source, savename='nuclear_shape.gltf', verbose=True):
         print('Gltf exporting is not supported in your version of VTK, try updating')
     exporter.SetInput(source)
     exporter.InlineDataOn()
+    exporter.SaveNormalOn()
     exporter.SetFileName(savename)
     exporter.Update()
     exporter.Write()
@@ -423,7 +424,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=False, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=True, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -893,7 +894,7 @@ def make_axes(source_object=None,
         # polaxes.SetCenterStickyAxes(False)
         return polaxes
 
-def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, generate_normals=False, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True):
+def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, generate_normals=True, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True):
 
     colors = vtk.vtkNamedColors()
 
@@ -961,6 +962,12 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
         normal_filter.SetInputData(polydata)
         normal_filter.Update()
 
+    # filter = vtk.vtkGeometryFilter()
+    # filter.SetInputData(polydata)
+    # filter.MergingOn()
+    # filter.Update()
+    # polydata = filter.GetOutput()
+
     if original_actor is None:
 
         # print(normal_filter.GetOutput(), scalars.shape)
@@ -993,6 +1000,12 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
                 lut.GetColor(val, col)
                 col = [int(c * 255) for c in col]
                 cur_color_data.InsertNextTuple3(col[0], col[1], col[2])
+            if generate_normals:   
+                for val in scalars:
+                    col = [0., 0., 0.]
+                    lut.GetColor(val, col)
+                    col = [int(c * 255) for c in col]
+                    cur_color_data.InsertNextTuple3(col[0], col[1], col[2])
 
             actor.GetMapper().GetInput().GetPointData().SetScalars(cur_color_data)
             actor.GetMapper().SetInterpolateScalarsBeforeMapping(interpolate_scalars)
@@ -1036,6 +1049,13 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
                 lut.GetColor(val, col)
                 col = [int(c * 255) for c in col]
                 cur_color_data.InsertNextTuple3(col[0], col[1], col[2])
+
+            if generate_normals:   
+                for val in scalars:
+                    col = [0., 0., 0.]
+                    lut.GetColor(val, col)
+                    col = [int(c * 255) for c in col]
+                    cur_color_data.InsertNextTuple3(col[0], col[1], col[2])
 
             original_actor.GetMapper().GetInput().GetPointData().SetScalars(cur_color_data)
             original_actor.GetMapper().SetInterpolateScalarsBeforeMapping(interpolate_scalars)
@@ -1125,10 +1145,24 @@ def add_spherical_function(function_values, secondary_scalars=None, radius=1, sc
     for x_num in range(x_granularity-1):
         for y_num in range(y_granularity-1):
 
-            tri_1 = [coordination[x_num, y_num], coordination[x_num + 1, y_num], coordination[x_num + 1, y_num + 1]]
-            triangles.append(tri_1)
-            tri_2 = [coordination[x_num, y_num], coordination[x_num + 1, y_num + 1], coordination[x_num , y_num +1]]
-            triangles.append(tri_2)
+            if y_num == y_granularity - 2: # for the endseam of the sphere to join it back up
+                tri_1 = [coordination[x_num, y_num], coordination[x_num + 1, y_num], coordination[x_num + 1, 0]]
+                triangles.append(tri_1)
+                tri_2 = [coordination[x_num, y_num], coordination[x_num + 1, 0], coordination[x_num , 0]]
+                triangles.append(tri_2)
+
+            
+            elif x_num == x_granularity - 2: # for the endseam of the sphere to join it back up
+                # tri_1 = [coordination[x_num, y_num], coordination[-1, y_num], coordination[-1, y_num + 1]]
+                # triangles.append(tri_1)
+                tri_2 = [coordination[x_num, y_num], coordination[x_num + 1,  y_num + 1], coordination[x_num ,  y_num +1]]
+                triangles.append(tri_2)
+                print('edgecase')
+            else:
+                tri_1 = [coordination[x_num, y_num], coordination[x_num + 1, y_num], coordination[x_num + 1, y_num + 1]]
+                triangles.append(tri_1)
+                tri_2 = [coordination[x_num, y_num], coordination[x_num + 1, y_num + 1], coordination[x_num , y_num +1]]
+                triangles.append(tri_2)
 
             if add_gridlines:
                 quad_1 = [coordination[x_num, y_num], coordination[x_num + 1, y_num], coordination[x_num + 1, y_num + 1], coordination[x_num, y_num + 1]]
