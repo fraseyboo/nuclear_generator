@@ -424,7 +424,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=True, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=False, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -1157,7 +1157,6 @@ def add_spherical_function(function_values, secondary_scalars=None, radius=1, sc
                 # triangles.append(tri_1)
                 tri_2 = [coordination[x_num, y_num], coordination[x_num + 1,  y_num + 1], coordination[x_num ,  y_num +1]]
                 triangles.append(tri_2)
-                print('edgecase')
             else:
                 tri_1 = [coordination[x_num, y_num], coordination[x_num + 1, y_num], coordination[x_num + 1, y_num + 1]]
                 triangles.append(tri_1)
