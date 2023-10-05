@@ -18,6 +18,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.verbose = False
         self.auto_up = True
+        self.smoothing = True
         self.AddObserver("MiddleButtonPressEvent", self.middle_button_press_event)
         self.AddObserver("MiddleButtonReleaseEvent", self.middle_button_release_event)
         self.AddObserver("LeftButtonPressEvent", self.left_button_press_event)
@@ -257,15 +258,11 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
         return
 
 
-    def screenshot(self):
-
-        print(self.camera)
-        print(self.camera.GetRoll())
-        print(self.camera.Get)
+    def screenshot(self, scale=1):
 
         w2if = vtk.vtkWindowToImageFilter()
-        # print(dir(w2if))
-        w2if.SetScale(4)
+  
+        w2if.SetScale(scale)
         w2if.SetInput(self.renderer)
         w2if.Update()
 
@@ -294,6 +291,10 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
             self.camera_zoom_out()
         if key == 'o':
             self.switch_rendering_mode()
+        
+        if key == 's':
+            self.switch_smoothing()
+
         return
 
 
@@ -337,6 +338,48 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
             projection_mode = self.camera.GetParallelProjection()
             # print(projection_mode)
             print('Camera set to Parallel Projection')
+
+        self.renderer.Render()
+
+    def switch_smoothing(self):
+
+
+
+        if self.smoothing is True:
+            print('Setting smoothing to False')
+            self.smoothing = False
+        else:
+            print('Setting smoothing to True')
+            self.smoothing = True
+
+        # print(dir(self.renderer))
+
+        renwin = actors = self.renderer
+        renderers = renwin.GetRenderers()
+
+        # print(dir(renderers))
+
+        total_renderers = renderers.GetNumberOfItems()
+
+        # print('total renderers:', total_renderers)
+        renderers.InitializeObjectBase()
+        renderers.InitTraversal()
+
+        for i in range(total_renderers):
+
+            actors = renderers.GetNextItem().GetActors()
+            actors.InitializeObjectBase()
+            actors.InitTraversal()
+
+            total_actors = actors.GetNumberOfItems()
+
+            for j in range(total_actors):
+                actor = actors.GetNextActor()
+                # print('actor', actor)
+                if self.smoothing:
+                    actor.GetProperty().SetInterpolationToGouraud()
+                else:
+                    actor.GetProperty().SetInterpolationToFlat()
 
         self.renderer.Render()
 

@@ -424,7 +424,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=False, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, theta=None, use_PBR=True, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -894,7 +894,7 @@ def make_axes(source_object=None,
         # polaxes.SetCenterStickyAxes(False)
         return polaxes
 
-def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, generate_normals=True, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True):
+def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, generate_normals=True, render_flat=False, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True):
 
     colors = vtk.vtkNamedColors()
 
@@ -1015,6 +1015,11 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
         if representation == 'wireframe':
 
             actor.GetProperty().SetRepresentationToWireframe()
+
+        if render_flat:
+            actor.GetProperty().SetInterpolationToFlat()
+        else:
+            actor.GetProperty().SetInterpolationToGouraud()
 
         return actor
 
