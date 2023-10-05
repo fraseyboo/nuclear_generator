@@ -188,7 +188,22 @@ class SliderCallback:
         A, b2, b3, b4, m2, m3, m4 = self._extract_values(sliders)
         r = physics_utils.calculate_r(A, b2, m2, b3, m3, b4, m4)
         old_shape = renderer.GetActors().GetItemAsObject(0)
+        actors = renderer.GetActors() 
+
         add_spherical_function(r, add_gridlines=False, original_actor=old_shape)
+
+        actors.InitializeObjectBase()
+        actors.InitTraversal()
+        source_actor = None
+
+        total_actors = actors.GetNumberOfItems()
+        for j in range(total_actors):
+            actor = actors.GetNextActor()
+            if isinstance(actor, vtk.vtkOpenGLActor):
+                source_actor = actor
+            if source_actor is not None:
+                if isinstance(actor, vtk.vtkCubeAxesActor):
+                    actor.SetBounds(source_actor.GetBounds())
         renderer.Modified()
 
 
@@ -451,13 +466,32 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
 
         if use_PBR:
             cube_path = 'cubemap'
-            if os.path.exists(cube_path + os.sep + 'nx.png'):
-                cubemap = ReadCubeMap(cube_path, '/', '.png', 2)
+            use_hdr=False
+            if use_hdr: 
+                print('using HDR')
+                reader = vtk.vtkHDRReader()
+                reader.SetFileName(cube_path + os.sep + 'lab.hdr')
+                texture = vtk.vtkTexture()
+                texture.SetColorModeToDirectScalars()
+                texture.SetInputConnection(reader.GetOutputPort())
+                texture.MipmapOn()
+                texture.InterpolateOn()
+                renderer.UseSphericalHarmonicsOn()
+                renderer.SetEnvironmentTexture(texture, True)
                 renderer.UseImageBasedLightingOn()
-                renderer.SetEnvironmentTexture(cubemap, True)
+
             else:
-                print('Could not find cubemap')
-                use_PBR = False
+                if os.path.exists(cube_path + os.sep + 'nx.png'):
+                    cubemap = ReadCubeMap(cube_path, '/', '.png', 2)
+                    renderer.UseSphericalHarmonicsOff()
+                    renderer.SetEnvironmentTexture(cubemap, True)
+                    renderer.UseImageBasedLightingOn()
+
+
+
+                else:
+                    print('Could not find cubemap')
+                    use_PBR = False
             # renderer.SetEnvironmentCubeMap(cubemap)
 
         # if add_skybox:
@@ -894,7 +928,7 @@ def make_axes(source_object=None,
         # polaxes.SetCenterStickyAxes(False)
         return polaxes
 
-def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, generate_normals=True, render_flat=False, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True):
+def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None, secondary_offset=None, original_actor=None, rotation=None, generate_normals=True, render_flat=False, opacity=1.0, verbose=False, mesh_color='black', color_map='viridis', c_range=None, representation='surface', interpolate_scalars=True, actor_name=None):
 
     colors = vtk.vtkNamedColors()
 
@@ -1020,6 +1054,10 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
             actor.GetProperty().SetInterpolationToFlat()
         else:
             actor.GetProperty().SetInterpolationToGouraud()
+
+        if actor_name is None:
+            actor_name = 'surface-%i' % np.random.randint(10000,9000000)
+        actor.SetObjectName(actor_name)
 
         return actor
 

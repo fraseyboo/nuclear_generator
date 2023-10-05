@@ -18,7 +18,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.verbose = False
         self.auto_up = True
-        self.smoothing = True
+        self.smoothing = 'smooth'
         self.AddObserver("MiddleButtonPressEvent", self.middle_button_press_event)
         self.AddObserver("MiddleButtonReleaseEvent", self.middle_button_release_event)
         self.AddObserver("LeftButtonPressEvent", self.left_button_press_event)
@@ -291,8 +291,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
             self.camera_zoom_out()
         if key == 'o':
             self.switch_rendering_mode()
-        
-        if key == 's':
+        if key == 'i':
             self.switch_smoothing()
 
         return
@@ -344,42 +343,51 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
     def switch_smoothing(self):
 
 
-
-        if self.smoothing is True:
-            print('Setting smoothing to False')
-            self.smoothing = False
-        else:
-            print('Setting smoothing to True')
-            self.smoothing = True
-
-        # print(dir(self.renderer))
-
         renwin = actors = self.renderer
         renderers = renwin.GetRenderers()
+        # total_renderers = renderers.GetNumberOfItems()
 
-        # print(dir(renderers))
-
-        total_renderers = renderers.GetNumberOfItems()
-
-        # print('total renderers:', total_renderers)
         renderers.InitializeObjectBase()
         renderers.InitTraversal()
 
-        for i in range(total_renderers):
+        # for i in range(total_renderers-1):
 
-            actors = renderers.GetNextItem().GetActors()
-            actors.InitializeObjectBase()
-            actors.InitTraversal()
+        renderer = renderers.GetNextItem()
+        pbr_enabled = renderer.GetUseImageBasedLighting()
 
-            total_actors = actors.GetNumberOfItems()
+        if self.smoothing == 'smooth':
+            print('Setting smoothing to flat')
+            self.smoothing = 'flat'
+        elif self.smoothing == 'flat':
+            if pbr_enabled:
+                print('Setting smoothing to PBR')
+                self.smoothing = 'pbr'
+            else:
+                print('Setting smoothing to gourand')
+                self.smoothing = 'smooth'
+        elif self.smoothing == 'pbr':
+            print('setting smoothing to gourand')
+            self.smoothing = 'smooth'
 
-            for j in range(total_actors):
-                actor = actors.GetNextActor()
-                # print('actor', actor)
-                if self.smoothing:
-                    actor.GetProperty().SetInterpolationToGouraud()
-                else:
-                    actor.GetProperty().SetInterpolationToFlat()
+        actors = renderer.GetActors()
+        actors.InitializeObjectBase()
+        actors.InitTraversal()
+
+        total_actors = actors.GetNumberOfItems()
+
+        for j in range(total_actors):
+            actor = actors.GetNextActor()
+            actor_name = actor.GetObjectName()
+            if actor_name is not None:
+                if actor_name.startswith('surface'):
+                    if self.smoothing == 'smooth':
+                        actor.GetProperty().SetInterpolationToGouraud()
+                    elif self.smoothing == 'pbr':
+                        actor.GetProperty().SetMetallic(1)
+                        actor.GetProperty().SetRoughness(0)
+                        actor.GetProperty().SetInterpolationToPBR()
+                    else:
+                        actor.GetProperty().SetInterpolationToFlat()
 
         self.renderer.Render()
 
