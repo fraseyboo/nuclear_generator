@@ -190,6 +190,65 @@ class SliderCallback:
         add_spherical_function(r, add_gridlines=False, original_actor=old_shape)
         renderer.Modified()
 
+
+def button_callback(widget, event):
+    value = widget.GetRepresentation().GetState()
+    renwin = widget.GetCurrentRenderer().GetRenderWindow()
+  
+    # print("Button pressed!", value)
+    write_gltf(renwin)
+    return
+
+
+def add_button(interactor, renderer):
+
+    print('adding button')
+
+    r1 = vtk.vtkPNGReader()
+    r1.SetFileName('icons/save.png')
+    r1.Update()
+
+
+    r2 = vtk.vtkPNGReader()
+    r2.SetFileName('icons/save.png')
+    r2.Update()
+
+    buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D() 
+    buttonRepresentation.SetNumberOfStates(2)
+
+    buttonRepresentation.SetButtonTexture(0, r1.GetOutput())
+    buttonRepresentation.SetButtonTexture(1, r2.GetOutput())
+
+    buttonWidget =   vtk.vtkButtonWidget()
+    buttonWidget.SetInteractor(interactor)
+    buttonWidget.SetRepresentation(buttonRepresentation)
+
+    # // Place the widget. Must be done after a render so that the
+    # // viewport is defined..
+    # // Here the widget placement is in normalized display coordinates.
+    upperRight = vtk.vtkCoordinate()
+    upperRight.SetCoordinateSystemToNormalizedDisplay()
+    upperRight.SetValue(0.05, 0.05)
+
+    bds = np.zeros(6)
+    sz = 50.0
+    bds[0] = upperRight.GetComputedDisplayValue(renderer)[0] - sz
+    bds[1] = bds[0] + sz
+    bds[2] = upperRight.GetComputedDisplayValue(renderer)[1] - sz
+    bds[3] = bds[2] + sz
+    bds[4] = bds[5] = 0.0
+
+    # // Scale to 1, default is .5
+    buttonRepresentation.SetPlaceFactor(1)
+    buttonRepresentation.PlaceWidget(bds)
+
+    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, button_callback)
+
+    buttonWidget.On()
+
+    return buttonWidget
+
+
 def add_sliders(interactor, renderer, initial_values=None):
 
     global sliders
@@ -197,6 +256,9 @@ def add_sliders(interactor, renderer, initial_values=None):
     sliders = dict()
 
     sw_p = SliderProperties()
+
+    sw_p.p1 = sw_p.p1 + np.asarray([0.05, 0])
+    sw_p.p2 = sw_p.p1 + np.asarray([sw_p.tube_length, 0])
 
     sw_p.title = 'A'
     sw_p.minimum_value = 1
@@ -504,6 +566,13 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
     renderWindow.SetWindowName('Nuclear Fruit Bowl: Shape Generator')
     renderWindow.SetSize(window_size)
     renderWindow.Render()
+
+    button = add_button(renderWindowInteractor, renderer)
+    button.On()
+
+    print(button)
+
+    # cube = interactor_utils.add_indicator_cube(renderWindowInteractor)
     renderWindowInteractor.Start()
 
 
@@ -1159,4 +1228,3 @@ if __name__ == "__main__":
 
 
     render(actors=actor_dict, initial_values=initial_values)
-
