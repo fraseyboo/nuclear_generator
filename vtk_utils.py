@@ -318,7 +318,7 @@ class SliderCallback:
         # .Modified()
         scalar_bar_widget.Modified()
 
-        print(dir(scalar_bar_widget))
+        # print(dir(scalar_bar_widget))
 
 
 
