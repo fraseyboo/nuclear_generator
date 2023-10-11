@@ -10,7 +10,7 @@ import LUT_utils
 import interactor_utils
 import physics_utils
 
-def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
+def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi, secondary_scalar=None):
 
     r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
 
@@ -18,12 +18,12 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
     initial_values.update({'A':A, 'b2':beta2, 'b3':beta3, 'b4':beta4, 'm2':m2, 'm3':m3, 'm4':m4})
 
 
-    nuclear_shape = add_spherical_function(r, add_gridlines=False)
+    nuclear_shape = add_spherical_function(r, add_gridlines=False, secondary_scalars=secondary_scalar)
 
     actor_dict = dict()
     actor_dict.update({'shape': nuclear_shape})
     
-    render_window = render(actors=actor_dict, initial_values=initial_values)
+    render_window = render(actors=actor_dict, initial_values=initial_values, secondary_scalar=secondary_scalar)
 
     return render_window
 
@@ -273,8 +273,9 @@ def make_slider(properties, slider_name=None):
     return slider_widget
 
 class SliderCallback:
-    def __init__(self, initial_value):
+    def __init__(self, initial_value, secondary_scalar=None):
         self.value = initial_value
+        self.secondary_scalar = secondary_scalar
 
     def _extract_values(self, sliders):
 
@@ -289,6 +290,7 @@ class SliderCallback:
         return A, b2, b3, b4, m2, m3, m4
 
     def __call__(self, caller, ev):
+
         slider_widget = caller
         value = slider_widget.GetRepresentation().GetValue()
         self.value = value
@@ -297,7 +299,7 @@ class SliderCallback:
         old_shape = renderer.GetActors().GetItemAsObject(0)
         actors = renderer.GetActors() 
 
-        add_spherical_function(r, add_gridlines=False, original_actor=old_shape)
+        add_spherical_function(r, add_gridlines=False, original_actor=old_shape, secondary_scalars=self.secondary_scalar)
 
         actors.InitializeObjectBase()
         actors.InitTraversal()
@@ -467,7 +469,7 @@ def reset_sliders(renderer):
 
 
 
-def add_sliders(interactor, renderer, initial_values=None):
+def add_sliders(interactor, renderer, initial_values=None, secondary_scalar=None):
 
     global sliders
 
@@ -492,7 +494,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     a_slider.SetAnimationModeToAnimate()
     a_slider.EnabledOn()
     a_slider.SetCurrentRenderer(renderer)
-    a_slider_cb = SliderCallback(sw_p.initial_value)
+    a_slider_cb = SliderCallback(sw_p.initial_value, secondary_scalar=secondary_scalar)
     a_slider.AddObserver(vtk.vtkCommand.InteractionEvent, a_slider_cb)
     sliders.update({sw_p.title: a_slider})
 
@@ -511,7 +513,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     beta_2_slider.SetAnimationModeToAnimate()
     beta_2_slider.EnabledOn()
     beta_2_slider.SetCurrentRenderer(renderer)
-    beta_2_slider_cb = SliderCallback(sw_p.initial_value)
+    beta_2_slider_cb = SliderCallback(sw_p.initial_value, secondary_scalar=secondary_scalar)
     beta_2_slider.AddObserver(vtk.vtkCommand.InteractionEvent, beta_2_slider_cb)
     sliders.update({sw_p.title: beta_2_slider})
 
@@ -528,7 +530,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     beta_3_slider.SetAnimationModeToAnimate()
     beta_3_slider.EnabledOn()
     beta_3_slider.SetCurrentRenderer(renderer)
-    beta_3_slider_cb = SliderCallback(sw_p.initial_value)
+    beta_3_slider_cb = SliderCallback(sw_p.initial_value, secondary_scalar=secondary_scalar)
     beta_3_slider.AddObserver(vtk.vtkCommand.InteractionEvent, beta_3_slider_cb)
     sliders.update({sw_p.title: beta_3_slider})
 
@@ -546,7 +548,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     beta_4_slider.SetAnimationModeToAnimate()
     beta_4_slider.EnabledOn()
     beta_4_slider.SetCurrentRenderer(renderer)
-    beta_4_slider_cb = SliderCallback(sw_p.initial_value)
+    beta_4_slider_cb = SliderCallback(sw_p.initial_value, secondary_scalar=secondary_scalar)
     beta_4_slider.AddObserver(vtk.vtkCommand.InteractionEvent, beta_4_slider_cb)
     sliders.update({sw_p.title: beta_4_slider})
 
@@ -576,7 +578,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     m2_slider.SetAnimationModeToAnimate()
     m2_slider.EnabledOn()
     m2_slider.SetCurrentRenderer(renderer)
-    m2_slider_cb = SliderCallback(sw_p.initial_value)
+    m2_slider_cb = SliderCallback(sw_p.initial_value, secondary_scalar=secondary_scalar)
     m2_slider.AddObserver(vtk.vtkCommand.InteractionEvent, m2_slider_cb)
     sliders.update({sw_p.title: m2_slider})
 
@@ -598,7 +600,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     m3_slider.SetAnimationModeToAnimate()
     m3_slider.EnabledOn()
     m3_slider.SetCurrentRenderer(renderer)
-    m3_slider_cb = SliderCallback(sw_p.initial_value)
+    m3_slider_cb = SliderCallback(sw_p.initial_value, secondary_scalar=secondary_scalar)
     m3_slider.AddObserver(vtk.vtkCommand.InteractionEvent, m3_slider_cb)
     sliders.update({sw_p.title: m3_slider})
 
@@ -619,7 +621,7 @@ def add_sliders(interactor, renderer, initial_values=None):
     m4_slider.SetAnimationModeToAnimate()
     m4_slider.EnabledOn()
     m4_slider.SetCurrentRenderer(renderer)
-    m4_slider_cb = SliderCallback(sw_p.initial_value)
+    m4_slider_cb = SliderCallback(sw_p.initial_value, secondary_scalar=secondary_scalar)
     m4_slider.AddObserver(vtk.vtkCommand.InteractionEvent, m4_slider_cb)
     sliders.update({sw_p.title: m4_slider})
 
@@ -644,7 +646,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, add_colorbar=True, theta=None, use_PBR=False, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, add_colorbar=True, secondary_scalar=None, theta=None, use_PBR=False, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -815,7 +817,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         # print(dir(current_actors))
 
         # print(current_actors.GetItemAsObject(0))
-        slider = add_sliders(renderWindowInteractor, renderer, initial_values=initial_values)
+        slider = add_sliders(renderWindowInteractor, renderer, initial_values=initial_values, secondary_scalar=secondary_scalar)
 
     # cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
     # cam_orient_manipulator.SetParentRenderer(renderer)
