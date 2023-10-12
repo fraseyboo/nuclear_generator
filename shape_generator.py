@@ -17,9 +17,14 @@ def main(frontend='vtk'):
     phi, theta = np.mgrid[0:2*np.pi:mesh_granularity*1j, 0:np.pi:mesh_granularity*1j]
 
     # initialise deformations for an example nucleus
-    beta2 = 0.154
-    beta3 = 0.097
-    beta4 = 0.080
+    # beta2 = 0.154
+    # beta3 = 0.097
+    # beta4 = 0.080
+    # A = 224
+
+    beta2 = 0
+    beta3 = 0
+    beta4 = 0
     A = 224
 
     m2 = 0
