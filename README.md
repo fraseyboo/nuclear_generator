@@ -13,6 +13,12 @@ If using this program in academic publications please consider citing us so that
   howpublished = {\url{https://github.com/fraseyboo/nuclear_generator/tree/master}}
 }
 ```
+# Future Work:
+
+We would like to add support for the following in the near future:
+* Potential energy surface maps in ($\beta$, $\gamma$).
+* Animation support using the gltf framework for PowerPoint Presentations
+
 # Example Plots:
 
 Some of the possible plots you can make with this program and a little creativity:
