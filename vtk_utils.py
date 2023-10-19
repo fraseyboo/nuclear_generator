@@ -1420,7 +1420,7 @@ def add_2D_function(function_values, x_range=[0,1], y_range=[0,1], scale=1, scal
         return actor_dict
 
 
-def add_spherical_function(function_values, secondary_scalars=None, radius=1, scale_mesh=True, add_gridlines=False, function_name=None, colormap='jet', mesh_color='black', absolute_displacement=True, offset=[0,0,0], line_width=2, original_actor=None):
+def add_spherical_function(function_values, secondary_scalars=None, radius=1, scale_mesh=True, add_gridlines=False, function_name=None, colormap='bwr', mesh_color='black', absolute_displacement=True, offset=[0,0,0], line_width=2, original_actor=None, opacity=1):
 
     function_values = function_values.T
     
@@ -1485,11 +1485,11 @@ def add_spherical_function(function_values, secondary_scalars=None, radius=1, sc
             locs = locs * flat_function_values[:, np.newaxis]
 
     if secondary_scalars is None:
-        surface = add_polyhedron(locs, triangles, scalars=flat_function_values, opacity=1.0, color_map=colormap, offset=offset, original_actor=original_actor)
+        surface = add_polyhedron(locs, triangles, scalars=flat_function_values, opacity=opacity, color_map=colormap, offset=offset, original_actor=original_actor)
     else:
         if np.ndim(secondary_scalars) > 1:
             secondary_scalars = secondary_scalars.flatten()
-        surface = add_polyhedron(locs, triangles, scalars=secondary_scalars, opacity=1.0, color_map=colormap, offset=offset, original_actor=original_actor)
+        surface = add_polyhedron(locs, triangles, scalars=secondary_scalars, opacity=opacity, color_map=colormap, offset=offset, original_actor=original_actor)
 
     actor_dict = dict()
 
