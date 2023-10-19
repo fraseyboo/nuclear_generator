@@ -17,6 +17,12 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi, secondary_scalar=
     initial_values=dict()
     initial_values.update({'A':A, 'b2':beta2, 'b3':beta3, 'b4':beta4, 'm2':m2, 'm3':m3, 'm4':m4})
 
+    print('press \'r\' to reset camera')
+    print('press \'o\' to toggle orthogonal projection')
+    print('press \'w\' to render as wireframe')
+    print('press \'s\' to render as surface')
+    print('press \'i\' to change display type (flat, smooth, reflective)')
+    print('press \'e\' or \'q\' to exit')
 
     nuclear_shape = add_spherical_function(r, add_gridlines=False, secondary_scalars=secondary_scalar)
 
@@ -143,7 +149,7 @@ def colorbar(actor,
 
 
 
-def ReadCubeMap(folderRoot, fileRoot, ext, key):
+def ReadCubeMap(folderRoot, fileRoot, ext, key, flip_axis=1):
     """
     Read the cube map.
     :param folderRoot: The folder where the cube maps are stored.
@@ -181,10 +187,13 @@ def ReadCubeMap(folderRoot, fileRoot, ext, key):
         imgReader = readerFactory.CreateImageReader2(fn)
         imgReader.SetFileName(fn)
 
-        flip = vtk.vtkImageFlip()
-        flip.SetInputConnection(imgReader.GetOutputPort())
-        flip.SetFilteredAxis(1)  # flip y axis
-        texture.SetInputConnection(i, flip.GetOutputPort(0))
+        if flip_axis is not None:
+            flip = vtk.vtkImageFlip()
+            flip.SetInputConnection(imgReader.GetOutputPort())
+            flip.SetFilteredAxis(flip_axis)  # flip y axis
+            texture.SetInputConnection(i, flip.GetOutputPort(0))
+        else:
+            texture.SetInputConnection(i, imgReader.GetOutputPort())
         i += 1
     return texture
 
@@ -310,7 +319,11 @@ class SliderCallback:
             actor = actors.GetNextActor()
             # print(type(actor), total_actors)
             if isinstance(actor, vtk.vtkOpenGLActor):
-                source_actor = actor
+                sourcename = actor.GetObjectName()
+                # print('sourcename', sourcename)
+                if sourcename is not None:
+                    if sourcename.startswith('surface'):
+                        source_actor = actor
             if source_actor is not None:
                 if isinstance(actor, vtk.vtkCubeAxesActor):
                     actor.SetBounds(source_actor.GetBounds())
@@ -646,7 +659,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, add_colorbar=True, secondary_scalar=None, theta=None, use_PBR=False, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, add_colorbar=True, secondary_scalar=None, theta=None, use_PBR=True, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -1276,6 +1289,15 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
 
         actor.GetProperty().SetOpacity(opacity)
 
+        if actor_name is None:
+            
+            random_string = np.random.randint(10000,9000000)
+
+            if representation == 'wireframe':
+                actor_name = 'wireframe-%i' % random_string
+            else:
+                actor_name = 'surface-%i' % random_string
+
         if representation == 'wireframe':
 
             actor.GetProperty().SetRepresentationToWireframe()
@@ -1285,8 +1307,7 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
         else:
             actor.GetProperty().SetInterpolationToGouraud()
 
-        if actor_name is None:
-            actor_name = 'surface-%i' % np.random.randint(10000,9000000)
+       
         actor.SetObjectName(actor_name)
 
         return actor
@@ -1473,11 +1494,12 @@ def add_spherical_function(function_values, secondary_scalars=None, radius=1, sc
     actor_dict = dict()
 
     if function_name is None:
-        function_name = 'Surface-%i' % np.random.randint(0, 10000000)
+        function_name = 'surface-%i' % np.random.randint(0, 10000000)
 
     actor_dict.update({function_name : surface})
 
     if add_gridlines:
+        print(quads.shape)
         grid = add_polyhedron(locs, quads, scalars=None, opacity=1.0, color_map=colormap, representation='wireframe', mesh_color=mesh_color, offset=offset)
         grid.GetProperty().SetLineWidth(line_width)
         grid.GetProperty().LightingOff()
@@ -1486,7 +1508,7 @@ def add_spherical_function(function_values, secondary_scalars=None, radius=1, sc
         if function_name is None:
             gridline_name = 'mesh lines %i' % np.random.randint(0, 10000000)
         else:
-            gridline_name = '%s-gridlines' % function_name 
+            gridline_name = 'gridlines-%s' % function_name 
         actor_dict.update({gridline_name: grid})
 
         return actor_dict
