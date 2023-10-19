@@ -1420,7 +1420,7 @@ def add_2D_function(function_values, x_range=[0,1], y_range=[0,1], scale=1, scal
         return actor_dict
 
 
-def add_spherical_function(function_values, secondary_scalars=None, radius=1, scale_mesh=True, add_gridlines=False, function_name=None, colormap='bwr', mesh_color='black', absolute_displacement=True, offset=[0,0,0], line_width=2, original_actor=None, opacity=1):
+def add_spherical_function(function_values, secondary_scalars=None, radius=1, scale_mesh=True, add_gridlines=False, function_name=None, colormap='jet', mesh_color='black', absolute_displacement=True, offset=[0,0,0], line_width=2, original_actor=None, opacity=1):
 
     function_values = function_values.T
     
