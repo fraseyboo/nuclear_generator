@@ -25,6 +25,10 @@ Some of the possible plots you can make with this program and a little creativit
 
 ![Screenshot](plots/nuclear_fruitbowl_nameless.png)
 
+The shapes generated from this program couple well with the 3D nuclide chart from https://people.physics.anu.edu.au/~ecs103/chart/
+
+![Screenshot](plots/shape_chart.png)
+
 Gridlines can be enabled to produce high-resolution raster images
 
 ![Screenshot](plots/octupole.png)
