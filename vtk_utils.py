@@ -1,9 +1,14 @@
+import warnings
 import numpy as np
 from scipy.special import sph_harm
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 import sys
 import os
+
+
+from vtk.util import numpy_support
+import PIL
 
 import vtk
 import LUT_utils
@@ -25,6 +30,8 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi, secondary_scalar=
     print('press \'e\' or \'q\' to exit')
 
     nuclear_shape = add_spherical_function(r, add_gridlines=False, secondary_scalars=secondary_scalar)
+
+    # nuclear_shape = add_textures_to_actor(nuclear_shape[list(nuclear_shape.keys())[0]], material='treadplate')
 
     actor_dict = dict()
     actor_dict.update({'shape': nuclear_shape})
@@ -147,6 +154,417 @@ def colorbar(actor,
 
     return scalar_bar
 
+
+
+def read_texture(filename, file_type='jpg', useSRGB=False):
+
+    if file_type == '.png':
+        color = vtk.vtkPNGReader()
+    if file_type == '.jpg':
+        color = vtk.vtkJPEGReader()
+    elif file_type == '.tiff':
+        warnings.warn('TIFF images may produce odd effects, JPEGs or PNGs are recommended')
+        color = vtk.vtkTIFFReader()
+    elif file_type == '.tif':
+        warnings.warn('TIFF images may produce odd effects, JPEGs or PNGs are recommended')
+        color = vtk.vtkTIFFReader()
+    color.SetFileName(filename)
+    color_texture = vtk.vtkTexture()
+    color_texture.SetInputConnection(color.GetOutputPort())
+
+    if useSRGB:
+        color_texture.UseSRGBColorSpaceOn()
+
+    return color_texture
+
+
+def read_texture_directory(folder_path, color=None, texture_size=[1024,1024], fallback_ORM=[128,0,0], fallback_normals=[128,128, 255], fallback_height=128):
+
+    file_type = '.jpg'
+
+    if color is None:
+
+        albedofile = folder_path + os.sep + "albedo" + file_type
+
+    else:
+
+        albedofile = folder_path + os.sep + color + file_type
+
+
+    if not os.path.isfile(albedofile):
+
+        file_type = '.png'
+
+        if color is None:
+
+            albedofile = folder_path + os.sep + "albedo" + file_type
+
+        else:
+
+            albedofile = folder_path + os.sep + color + file_type
+
+    if not os.path.isfile(albedofile):
+
+
+        file_type = '.tif'
+
+        if color is None:
+
+            albedofile = folder_path + os.sep + "albedo" + file_type
+
+        else:
+
+            albedofile = folder_path + os.sep + color + file_type
+
+    if not os.path.isfile(albedofile):
+
+        print('can\'t find textures in directory:', folder_path)
+
+    albedo_texture = read_texture(albedofile, useSRGB=True, file_type=file_type)
+
+
+    normalfile = folder_path + os.sep + "normal" + file_type
+    heightfile = folder_path + os.sep + "height" + file_type
+    emissivefile = folder_path + os.sep + "emissive" + file_type
+    ormfile =  folder_path + os.sep + "orm" + file_type
+
+    a = np.array(PIL.Image.open(albedofile))
+    if np.ndim(a) == 3:
+        a = a[:,:,0]
+    texture_size = a.shape
+
+    if os.path.isfile(ormfile):
+
+        orm_texture = read_texture(ormfile, file_type=file_type)
+
+    else:
+
+        print('Can\'t find ORM file, assuming seperate Occlusion, Roughness & Metalicity')
+
+        occlusionfile = folder_path + os.sep + "ao" + file_type
+        roughnessfile = folder_path + os.sep + "roughness" + file_type
+        specularfile = folder_path + os.sep + "specular" + file_type
+        metalfile = folder_path + os.sep + "metallic" + file_type
+
+        if os.path.isfile(occlusionfile):
+            o = np.array(PIL.Image.open(occlusionfile))
+            if np.ndim(o) == 3:
+                o = o[:,:,0]
+        else:
+            print('Occlusion file not found, using fallback value: %f' % fallback_ORM[0])
+            o = np.ones(texture_size) * fallback_ORM[0]
+
+        if os.path.isfile(roughnessfile):
+            r = np.array(PIL.Image.open(roughnessfile))
+            if np.ndim(r) == 3:
+                r = r[:,:,0]
+        elif os.path.isfile(specularfile):
+            r = 1 - np.array(PIL.Image.open(specularfile))
+            if np.ndim(r) == 3:
+                r = r[:,:,0]
+                print(r)
+        else:
+            print('Roughness file not found, using fallback value: %f' % fallback_ORM[1])
+            r = np.ones(texture_size) * fallback_ORM[1]
+
+        if os.path.isfile(metalfile):
+            m = np.array(PIL.Image.open(metalfile))
+            if np.ndim(m) == 3:
+                m = m[:,:,0]
+        else:
+            print('Metalicity file not found, using fallback value: %f' % fallback_ORM[2])
+            m = np.ones(texture_size) * fallback_ORM[2]
+
+        orm = np.dstack([o,r,m])
+
+        orm_image = PIL.Image.fromarray(orm.astype(np.uint8))
+        print('saving new ORM texture to %s' % ormfile)
+        orm_image.save(ormfile)
+
+        orm_texture = read_texture(ormfile, file_type=file_type)
+
+
+    if os.path.isfile(normalfile):
+        normal_texture = read_texture(normalfile, file_type=file_type)
+    else:
+        print('Normal file not found, creating fallback')
+        normal_array = np.ones([*a.shape, 3]) * fallback_normals
+        normal_image = PIL.Image.fromarray(normal_array.astype(np.uint8))
+        normal_image.save(normalfile)
+        normal_texture = read_texture(normalfile, file_type=file_type)
+
+
+    texture_dict = dict()
+
+    texture_dict.update({'albedo':albedo_texture})
+    texture_dict.update({'normal':normal_texture})
+    texture_dict.update({'ORM':orm_texture})
+
+    if os.path.isfile(heightfile):
+        height_texture = read_texture(heightfile, useSRGB=True, file_type=file_type)
+        texture_dict.update({'height':height_texture})
+    else:
+        pass
+
+    if os.path.isfile(emissivefile):
+        emissive_texture = read_texture(emissivefile, useSRGB=True, file_type=file_type)
+        texture_dict.update({'emissive':emissive_texture})
+    else:
+        pass
+
+    return texture_dict
+
+def generate_texture_coords(uResolution, vResolution, pd):
+    """
+    Generate u, v texture coordinates on a parametric surface.
+    :param uResolution: u resolution
+    :param vResolution: v resolution
+    :param pd: The polydata representing the surface.
+    :return: The polydata with the texture coordinates added.
+    """
+    print('Can\'t find texture coordinates, making new ones')
+    numPts = pd.GetNumberOfPoints()
+
+    if ((uResolution is None) or (vResolution is None)):
+        limit = int(np.floor(np.sqrt(numPts)))
+        uResolution = limit
+        vResolution = limit
+
+    elif numPts < (uResolution * vResolution):
+        limit = int(np.floor(np.sqrt(numPts)))
+        warnings.warn('Texture coords set too high, setting both to: %i' % limit)
+        uResolution = limit
+        vResolution = limit
+
+    u0 = 1.0
+    v0 = 0.0
+    du = 1.0 / (uResolution - 1)
+    dv = 1.0 / (vResolution - 1)
+
+    tCoords = vtk.vtkFloatArray()
+    tCoords.SetNumberOfComponents(2)
+    tCoords.SetNumberOfTuples(numPts)
+    tCoords.SetName('Texture Coordinates')
+    ptId = 0
+    u = u0
+    for i in range(0, uResolution):
+        v = v0
+        for j in range(0, vResolution):
+            tc = [u, v]
+            # print(ptId, tc)
+            tCoords.SetTuple(ptId, tc)
+            v += dv
+            ptId += 1
+        u -= du
+    pd.GetPointData().SetTCoords(tCoords)
+    return pd, tCoords
+
+
+def add_textures_to_actor(actor, material=None, texture_dir='textures', color=None, occlusion=0.5, roughness=1, metallic=1, normal_scale=1, height_scale=0.01, emissive=(1,1,1), uResolution=None, vResolution=None, use_heightmap=False, method='vtk', texture_scale=(1,1,1), verbose=False):
+
+    fallback_ORM = np.asarray([occlusion, roughness, metallic]) * 255
+
+    # actor.GetProperty().SetInterpolationToPBR()
+
+    tex = actor.GetTexture()
+
+    if tex is None:
+        print('reading textures from', texture_dir + os.sep + material)
+        if material is not None:
+            texture_dict = read_texture_directory(texture_dir + os.sep + material, fallback_ORM=fallback_ORM, color=color)
+        else:
+            texture_dict = read_texture_directory(texture_dir, fallback_ORM=fallback_ORM, color=color)
+
+    # if (('height' in texture_dict) and (use_heightmap)):
+
+    #     if material is not None:
+    #         filepath = texture_dir + material + '/height.jpg'
+    #     else:
+    #         filepath = texture_dir + 'height.jpg'
+    #     reader = vtk.vtkJPEGReader()
+    #     if not os.path.isfile(filepath):
+    #         if material is not None:
+    #             filepath = texture_dir + material + '/height.png'
+    #         else:
+    #             filepath = texture_dir + 'height.png'
+    #         reader = vtk.vtkPNGReader()
+    #         if not os.path.isfile(filepath):
+    #             if material is not None:
+    #                 filepath = texture_dir + material + '/height.tiff'
+    #             else:
+    #                 filepath = texture_dir + 'height.tiff'
+    #             reader = vtk.vtkTIFFReader()
+
+    #     if verbose:
+
+    #         print('Height displacement enabled, using %s' % filepath)
+
+
+    #     reader.SetFileName(filepath)
+    #     reader.Update()
+
+    #     image_extents = np.asarray(reader.GetDataExtent())
+    #     image_size = np.asarray([image_extents[1] - image_extents[0], image_extents[3] - image_extents[2], image_extents[5] - image_extents[4]])
+
+
+
+    #     current_tocoords = actor.GetMapper().GetInput().GetPointData().GetTCoords()
+
+    #     # print('Current Coordinates', current_tocoords)
+
+    #     if current_tocoords is not None:
+
+    #         mapper = actor.GetMapper()
+
+    #         probe_points = vtk.vtkPoints()
+
+    #         # print(current_tocoords)
+
+    #         # print(image_size)
+
+    #         probe_points.SetNumberOfPoints(current_tocoords.GetNumberOfTuples())
+
+    #         # print(probe_points.GetDataType())
+
+    #         # print(dir(probe_points))
+
+    #         np_coords = numpy_support.vtk_to_numpy(current_tocoords)
+    #         n_0 = np.zeros([current_tocoords.GetNumberOfTuples(),1])
+            
+    #         new_coords = numpy_support.numpy_to_vtk(np.hstack([np_coords, n_0])  * image_size)
+
+    #         # probe_points.SetNumberOfComponents(new_coords.GetNumberOfComponents())
+    #         probe_points.SetData(new_coords)
+    #         probe_poly = vtk.vtkPolyData()
+    #         probe_poly.SetPoints(probe_points)
+
+    #     else:
+
+    #         pd = generate_texture_coords(uResolution, vResolution, actor.GetMapper().GetInput())
+
+    #         tcoords = pd.GetPointData().GetTCoords()
+
+    #         probe_points = vtk.vtkPoints()
+    #         probe_points.SetNumberOfPoints(tcoords.GetNumberOfValues())
+
+    #         np_coords = numpy_support.vtk_to_numpy(tcoords)
+    #         n_0 = np.zeros([tcoords.GetNumberOfTuples(),1])
+
+    #         probe_points.SetData(numpy_support.numpy_to_vtk(np.hstack([np_coords, n_0]) * image_size))
+
+    #         probe_poly = vtk.vtkPolyData()
+    #         probe_poly.SetPoints(probe_points)
+
+    #         current_tocoords = probe_poly
+
+    #     probes = vtk.vtkProbeFilter()
+    #     probes.SetSourceData(reader.GetOutput())
+    #     probes.SetInputData(probe_poly)
+    #     probes.Update()
+
+    #     actor.GetMapper().GetInput().GetPointData().SetScalars(probes.GetOutput().GetPointData().GetScalars())
+
+    #     warp = vtk.vtkWarpScalar()
+    #     warp.SetInputData(actor.GetMapper().GetInput())
+    #     warp.SetScaleFactor(height_scale)
+    #     warp.Update()
+
+    #     mapper = vtk.vtkPolyDataMapper()
+    #     mapper.SetInputConnection(warp.GetOutputPort())
+    #     mapper.GetInput().GetPointData().SetScalars(None)
+
+    #     smoothing_passes = 1
+
+    #     if smoothing_passes is not None:
+
+    #         if verbose:
+    #             print('Smoothing mesh, may take a while')
+
+    #         smooth_loop = vtk.vtkSmoothPolyDataFilter()
+    #         smooth_loop.SetNumberOfIterations(smoothing_passes)
+    #         smooth_loop.SetRelaxationFactor(0.5)
+    #         smooth_loop.BoundarySmoothingOn()
+    #         smooth_loop.SetInputData(mapper.GetInput())
+    #         smooth_loop.Update()
+    #         mapper = vtk.vtkPolyDataMapper()
+
+    #         mapper.SetInputConnection(smooth_loop.GetOutputPort())
+
+    #     # tcoords_np = numpy_support.vtk_to_numpy(current_tocoords)
+
+    #     # print(tcoords_np.shape)
+
+    #     # plt.figure()
+    #     # plt.scatter(tcoords_np[:,0], tcoords_np[:,1])
+    #     # plt.show()
+
+
+    # else:
+
+    #     # # print(actor)
+
+    #     # current_tocoords = actor.GetMapper().GetInput().GetPointData().GetTCoords()
+    #     # tcoords_np = numpy_support.vtk_to_numpy(current_tocoords)
+
+    #     # # print(tcoords_np)
+
+    #     # plt.figure()
+    #     # plt.scatter(tcoords_np[:,0], tcoords_np[:,1])
+    #     # plt.show()
+
+    #     # print('current texture coordinates', current_tocoords)
+
+    mapper = actor.GetMapper()
+
+    current_tcoords = mapper.GetInput().GetCellData().GetTCoords()
+
+    if current_tcoords is None:
+
+        pd, tcords = generate_texture_coords(uResolution, vResolution, mapper.GetInput())
+
+        # tangents = vtk.vtkPolyDataTangents()
+        # tangents.SetComputePointTangents(True)
+        # tangents.SetComputeCellTangents(True)
+        # tangents.SetInputData(pd)
+        # tangents.Update()
+
+        mapper.SetInputData(pd)
+
+        # mapper.SetInputConnection(tangents.GetOutputPort())
+
+
+        mapper.GetInput().GetPointData().SetTCoords(tcords)
+        mapper.GetInput().GetCellData().SetTCoords(tcords)
+        mapper.Modified()
+
+        # print(tcords)
+
+    else: 
+
+        pass
+
+
+    # actor.SetMapper(mapper)
+
+    if tex is None:
+
+
+        actor.GetProperty().SetRoughness(roughness)
+        actor.GetProperty().SetMetallic(metallic)
+        actor.GetProperty().SetOcclusionStrength(occlusion)
+        actor.GetProperty().SetNormalScale(normal_scale)
+        actor.GetProperty().SetEmissiveFactor(emissive)
+
+        actor.SetTexture(texture_dict['albedo'])
+        # actor.GetProperty().SetBaseColorTexture(texture_dict['albedo'])
+        actor.GetProperty().SetNormalTexture(texture_dict['normal'])
+        actor.GetProperty().SetORMTexture(texture_dict['ORM'])
+
+        if 'emissive' in texture_dict:
+
+            actor.GetProperty().SetEmissiveTexture(texture_dict['emissive'])
+
+    return actor
 
 
 def ReadCubeMap(folderRoot, fileRoot, ext, key, flip_axis=1):
@@ -309,7 +727,7 @@ class SliderCallback:
         actors = renderer.GetActors() 
 
         add_spherical_function(r, add_gridlines=False, original_actor=old_shape, secondary_scalars=self.secondary_scalar)
-
+        
         actors.InitializeObjectBase()
         actors.InitTraversal()
         source_actor = None
@@ -327,6 +745,10 @@ class SliderCallback:
             if source_actor is not None:
                 if isinstance(actor, vtk.vtkCubeAxesActor):
                     actor.SetBounds(source_actor.GetBounds())
+
+
+        # _ = add_textures_to_actor(source_actor, material='rock')
+
         renderer.Modified()
 
         scalar_bar_widget.GetScalarBarActor().SetLookupTable(source_actor.GetMapper().GetLookupTable())
@@ -1234,6 +1656,8 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
     polydata.SetPoints(points)
     polydata.SetPolys(cell_array)
 
+    # polydata, tcords = generate_texture_coords(None, None, polydata)
+
     if generate_normals:
         normal_filter = vtk.vtkPolyDataNormals()
         normal_filter.SetInputData(polydata)
@@ -1245,6 +1669,18 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
     # filter.Update()
     # polydata = filter.GetOutput()
 
+
+
+    # tangents = vtk.vtkPolyDataTangents()
+    # tangents.SetComputePointTangents(True)
+    # tangents.SetComputeCellTangents(True)
+    # if generate_normals:
+    #     tangents.SetInputData(normal_filter.GetOutput())
+    # else:
+    #     tangents.SetInputData(polydata)
+    # tangents.Update()
+
+
     if original_actor is None:
 
         # print(normal_filter.GetOutput(), scalars.shape)
@@ -1254,6 +1690,7 @@ def add_polyhedron(vertices, faces, labels=None, offset=[0, 0, 0], scalars=None,
             mapper.SetInputData(normal_filter.GetOutput())
         else:
             mapper.SetInputData(polydata)
+        # mapper.SetInputData(tangents.GetOutput())
 
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
