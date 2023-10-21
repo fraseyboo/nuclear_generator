@@ -7,13 +7,15 @@ import vtk_utils
 import mpl_utils
 import physics_utils
 
+import config
 
 mesh_granularity = 50
 
 # secondary_scalar = physics_utils.generate_spherical_harmonic(n=3,m=8, granularity=mesh_granularity)
 secondary_scalar = None
 
-def main(frontend='vtk'):
+def main():
+
 
     parser = argparse.ArgumentParser(description="Nuclear Shape Generator", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-A", "-nucleons", default=120, type=int, help="Number of nucleons")
@@ -23,10 +25,11 @@ def main(frontend='vtk'):
     parser.add_argument("-M2", "-mode2", default=0, type=int, help="mode_2 value")
     parser.add_argument("-M3", "-mode3", default=0, type=int, help="mode_3 value")
     parser.add_argument("-M4", "-mode4", default=0, type=int, help="mode_4 value")
-
+    parser.add_argument("-F", "-frontend", default=config.frontend, type=str, help="Visualisation frontend")
+    parser.add_argument("-S", "-savename", default=config.savename, type=str, help="Save name")
     args = parser.parse_args()
-    config = vars(args)
-    print('Current config', config)
+    arguments = vars(args)
+    print('Current arguments', arguments)
 
     # Make mesh of thetas and phis
     phi, theta = np.mgrid[0:2*np.pi:mesh_granularity*1j, 0:np.pi:mesh_granularity*1j]
@@ -46,13 +49,16 @@ def main(frontend='vtk'):
     # m3 = 0
     # m4 = 0
 
-    A = int(config['A'])
-    beta2 = float(config['B2'])
-    beta3 = float(config['B3'])
-    beta4 = float(config['B4'])
-    m2 = int(config['M2'])
-    m3 = int(config['M3'])
-    m4 = int(config['M4'])
+    A = int(arguments['A'])
+    beta2 = float(arguments['B2'])
+    beta3 = float(arguments['B3'])
+    beta4 = float(arguments['B4'])
+    m2 = int(arguments['M2'])
+    m3 = int(arguments['M3'])
+    m4 = int(arguments['M4'])
+
+    frontend = arguments['F']
+    config.savename = arguments['S']
 
     if frontend == 'mpl':
         mpl_utils.matplotlib_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi)
@@ -61,4 +67,4 @@ def main(frontend='vtk'):
         # vtk_utils.write_gltf(render_window)
         
 if __name__ == '__main__':
-    main(frontend='mpl')
+    main()

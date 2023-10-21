@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 import sys
 import os
+import config
 
 
 from vtk.util import numpy_support
@@ -15,8 +16,11 @@ import LUT_utils
 import interactor_utils
 import physics_utils
 
+
 def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi, secondary_scalar=None):
 
+
+    # print(globals()["savename"])
     r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
 
     initial_values=dict()
@@ -40,7 +44,9 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi, secondary_scalar=
 
     return render_window
 
-def write_gltf(source, savename='nuclear_shape.gltf', verbose=True):
+def write_gltf(source, verbose=True):
+
+    savename = config.savename
 
     if verbose:
         print('Writing GLTF to %s' % savename)
@@ -760,7 +766,7 @@ class SliderCallback:
 
 
 
-def export_button_callback(widget, event):
+def export_button_callback(widget, event, savename='shape.gltf'):
     value = widget.GetRepresentation().GetState()
     renwin = widget.GetCurrentRenderer().GetRenderWindow()
   
