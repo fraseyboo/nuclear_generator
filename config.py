@@ -13,3 +13,4 @@ M3 = 0
 M4 = 0
 
 sliders = None
+secondary_scalar=None

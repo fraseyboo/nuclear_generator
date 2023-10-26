@@ -11,8 +11,8 @@ import config
 
 mesh_granularity = 50
 
-# secondary_scalar = physics_utils.generate_spherical_harmonic(n=3,m=8, granularity=mesh_granularity)
-secondary_scalar = None
+secondary_scalar = physics_utils.generate_spherical_harmonic(n=3,m=8, granularity=mesh_granularity)
+# secondary_scalar = None
 
 def main():
 
@@ -27,27 +27,13 @@ def main():
     parser.add_argument("-M4", "-mode4", default=0, type=int, help="mode_4 value")
     parser.add_argument("-F", "-frontend", default=config.frontend, type=str, help="Visualisation frontend")
     parser.add_argument("-S", "-savename", default=config.savename, type=str, help="Save name")
+    parser.add_argument("-C", "-colormap", default=config.colormap, type=str, help="Colormap")
     args = parser.parse_args()
     arguments = vars(args)
     print('Current arguments', arguments)
 
     # Make mesh of thetas and phis
     phi, theta = np.mgrid[0:2*np.pi:mesh_granularity*1j, 0:np.pi:mesh_granularity*1j]
-
-    # initialise deformations for an example nucleus
-    # beta2 = 0.154
-    # beta3 = 0.097
-    # beta4 = 0.080
-    # A = 224
-
-    # beta2 = 0
-    # beta3 = 0
-    # beta4 = 2
-    # A = 224
-
-    # m2 = 0
-    # m3 = 0
-    # m4 = 0
 
     A = int(arguments['A'])
     beta2 = float(arguments['B2'])
@@ -68,11 +54,13 @@ def main():
 
     frontend = arguments['F']
     config.savename = arguments['S']
+    config.colormap = arguments['C']
+    config.secondary_scalar = secondary_scalar
 
     if frontend == 'mpl':
         mpl_utils.matplotlib_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi)
     elif frontend == 'vtk':
-        render_window = vtk_utils.vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi, secondary_scalar=secondary_scalar)
+        render_window = vtk_utils.vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi)
         # vtk_utils.write_gltf(render_window)
         
 if __name__ == '__main__':
