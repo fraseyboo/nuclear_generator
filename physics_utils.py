@@ -49,14 +49,25 @@ def calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta=None, mesh_granularity
     return r
 
 
-def generate_spherical_harmonic(n, m, granularity=50, radius=1, absolute=False):
+def generate_spherical_harmonic(n, m, granularity=50, radius=1, absolute=False, verbose=False):
 
-    x_granularity = granularity + 1
-    y_granularity = granularity + 1
+    x_granularity = granularity 
+    y_granularity = granularity 
 
     r = 1
 
     phi, theta = np.mgrid[0:np.pi:(x_granularity)*1j, 0:2 * np.pi:(y_granularity)*1j]
+
+    common_names = ['???', 'Dipole', 'Quadrupole', 'Octupole', 'Hexadecapole']
+
+    if verbose:
+        print('n:%f, m:%f' %(n, m))
+    if n == 0:
+        if np.abs(m) <= 3:
+            print(common_names[np.abs(m)])
+        else:
+            print('???')
+
 
     harmonic = sph_harm(n, m, theta, phi).real * radius
 

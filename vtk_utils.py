@@ -23,6 +23,9 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
     # print(globals()["savename"])
     r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
 
+    if config.secondary_scalar is not None: 
+        r += (config.secondary_scalar.T) * config.h3
+
     initial_values=dict()
     initial_values.update({'A':A, 'b2':beta2, 'b3':beta3, 'b4':beta4, 'm2':m2, 'm3':m3, 'm4':m4})
 
@@ -739,7 +742,12 @@ class SliderCallback:
 def update_surface(A, b2, m2, b3, m3, b4, m4):
 
 
-    r = physics_utils.calculate_r(A, b2, m2, b3, m3, b4, m4)
+    r = physics_utils.calculate_r(A, b2, m2, b3, m3, b4, m4, mesh_granularity=config.granularity)
+
+    if config.secondary_scalar is not None: 
+        r += (config.secondary_scalar.T) * config.h3
+
+
     old_shape = renderer.GetActors().GetItemAsObject(0)
     actors = renderer.GetActors() 
 
@@ -1968,7 +1976,7 @@ if __name__ == "__main__":
     # Create a sphere
 
     # Make mesh of thetas and phis
-    phi, theta = np.mgrid[0:2*np.pi:50j, 0:np.pi:50j]
+    phi, theta = np.mgrid[0:2*np.pi:config.granularity * 1j, 0:np.pi:config.granularity * 1j]
 
     # initialise deformations for a spherical nucleus with mass A=100
     beta2 = 0.5

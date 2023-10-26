@@ -9,10 +9,7 @@ import physics_utils
 
 import config
 
-mesh_granularity = 50
-
-secondary_scalar = physics_utils.generate_spherical_harmonic(n=3,m=8, granularity=mesh_granularity)
-# secondary_scalar = None
+from matplotlib import pyplot as plt
 
 def main():
 
@@ -28,11 +25,30 @@ def main():
     parser.add_argument("-F", "-frontend", default=config.frontend, type=str, help="Visualisation frontend")
     parser.add_argument("-S", "-savename", default=config.savename, type=str, help="Save name")
     parser.add_argument("-C", "-colormap", default=config.colormap, type=str, help="Colormap")
+    parser.add_argument("-G", "-granularity", default=50, type=str, help="Mesh Granularity")
+    parser.add_argument("-H1", "-harmonic1", default=0, type=int, help="Harmonic n")
+    parser.add_argument("-H2", "-harmonic2", default=0, type=int, help="Harmonic m")
+    parser.add_argument("-H3", "-harmonic3", default=0, help="Harmonic Magnitude")
+    
     args = parser.parse_args()
     arguments = vars(args)
     print('Current arguments', arguments)
 
-    # Make mesh of thetas and phis
+    mesh_granularity = int(arguments['G'])
+    h1 = int(arguments['H1'])
+    h2 = int(arguments['H2'])
+    h3 = float(arguments['H3'])
+
+    config.granularity = mesh_granularity
+    config.h1 = h1
+    config.h2 = h2 
+    config.h3 = h3
+
+    if (h2 != 0):
+        secondary_scalar = physics_utils.generate_spherical_harmonic(n=h1,m=h2, granularity=mesh_granularity, verbose=True)
+    else:
+        secondary_scalar = None
+    # Make mesh of thetas and phi
     phi, theta = np.mgrid[0:2*np.pi:mesh_granularity*1j, 0:np.pi:mesh_granularity*1j]
 
     A = int(arguments['A'])
