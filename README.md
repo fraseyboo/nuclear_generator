@@ -2,7 +2,7 @@
 The Nuclear Fruitbowl is the moniker for the wide variety of different shapes of nucleii that exist in our universe, whilst beta paremeters give an idea of deformation to a trained physicist it can be hard to convey their meaning to the general public. If you've ever wondered what a 'Pear Shaped' nucleus really means then this program may be useful to you. This program has been developed to allow physicists to generate a variety of nuclear shapes for raster visualisation in Blender and producing models for 3D printing to help communicate nuclear structure to a wider audience.
 
 # Citing this program:
-If using this program in academic publications please consider citing us so that others can learn of our research. 
+If using this program (and any figures generated with it) in academic publications/presentations please consider citing us so that others can learn of our research. 
 ```
 @misc{NuclearFruitbowl,
   author = {Holloway, F and Cubiss, J},
