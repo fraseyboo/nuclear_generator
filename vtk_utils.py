@@ -33,7 +33,7 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi, secondary_scalar=
     print('press \'i\' to change display type (flat, smooth, reflective)')
     print('press \'e\' or \'q\' to exit')
 
-    nuclear_shape = add_spherical_function(r, add_gridlines=False, secondary_scalars=secondary_scalar)
+    nuclear_shape = add_spherical_function(r, add_gridlines=False, secondary_scalars=secondary_scalar, colormap=config.colormap)
 
     # nuclear_shape = add_textures_to_actor(nuclear_shape[list(nuclear_shape.keys())[0]], material='treadplate')
 
@@ -706,7 +706,7 @@ def make_slider(properties, slider_name=None):
     return slider_widget
 
 class SliderCallback:
-    def __init__(self, initial_value, secondary_scalar=None):
+    def __init__(self, initial_value=None, secondary_scalar=None):
         self.value = initial_value
         self.secondary_scalar = secondary_scalar
 
@@ -732,7 +732,7 @@ class SliderCallback:
         old_shape = renderer.GetActors().GetItemAsObject(0)
         actors = renderer.GetActors() 
 
-        add_spherical_function(r, add_gridlines=False, original_actor=old_shape, secondary_scalars=self.secondary_scalar)
+        add_spherical_function(r, add_gridlines=False, original_actor=old_shape, secondary_scalars=self.secondary_scalar, colormap=config.colormap)
         
         actors.InitializeObjectBase()
         actors.InitTraversal()
@@ -776,35 +776,7 @@ def export_button_callback(widget, event, savename='shape.gltf'):
 
 def reset_button_callback(widget, event):
     value = widget.GetRepresentation().GetState()
-    # renwin = widget.GetCurrentRenderer().GetRenderWindow()
-    # renderers = renwin.GetRenderers()
-    # renderers.InitializeObjectBase()
-    # renderers.InitTraversal()
 
-    # for i in range(renderers.GetNumberOfItems()):
-    #     renderer = renderers.GetNextItem()
-
-    #     actors = renderer.GetActors()
-    #     actors.InitializeObjectBase()
-    #     actors.InitTraversal()
-
-    #     total_actors = actors.GetNumberOfItems()
-
-    #     for j in range(total_actors):
-
-    #         actor = actors.GetNextActor()
-    #         print(type(actor), actor.GetObjectName())
-
-    #     # print(renderer)
-
-    print(dir(widget))
-
-    interactor = widget.GetInteractor()
-
-    print(dir(interactor))
-
-  
-    # print("Button pressed!", value)
     reset_sliders(renderer)
     return
 
@@ -904,10 +876,25 @@ def add_reset_button(interactor, renderer):
 
 def reset_sliders(renderer):
 
-    actors = renderer.GetActors()
+    sliders = config.sliders
 
-    print(actors)
+    sliders['A'].GetRepresentation().SetValue(config.A)
+    sliders['A'].Modified()
+    sliders['Beta 2'].GetRepresentation().SetValue(config.B2)
+    sliders['Beta 2'].Modified()
+    sliders['Beta 3'].GetRepresentation().SetValue(config.B3)
+    sliders['Beta 3'].Modified()
+    sliders['Beta 4'].GetRepresentation().SetValue(config.B4)
+    sliders['Beta 4'].Modified()
 
+    sliders['m2'].GetRepresentation().SetValue(config.M2)
+    sliders['m2'].Modified()
+    sliders['m3'].GetRepresentation().SetValue(config.M3)
+    sliders['m3'].Modified()
+    sliders['m4'].GetRepresentation().SetValue(config.M4)
+    sliders['m4'].Modified()
+    
+    renderer.Render()
 
 
 def add_sliders(interactor, renderer, initial_values=None, secondary_scalar=None):
@@ -1258,8 +1245,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         # print(dir(current_actors))
 
         # print(current_actors.GetItemAsObject(0))
-        slider = add_sliders(renderWindowInteractor, renderer, initial_values=initial_values, secondary_scalar=secondary_scalar)
+        sliders = add_sliders(renderWindowInteractor, renderer, initial_values=initial_values, secondary_scalar=secondary_scalar)
 
+        config.sliders = sliders
     # cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
     # cam_orient_manipulator.SetParentRenderer(renderer)
     # # Enable the widget.
