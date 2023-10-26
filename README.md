@@ -37,6 +37,10 @@ Normals are generated allowing for physically-based rendering, cubemaps are supp
 
 ![Screenshot](plots/pbr.png)
 
+Higher order harmonics are also supported:
+
+![Screenshot](plots/higher_orders.png)
+
 Direct exporting to Blender allows for more advanced rendering:
 
 ![Screenshot](plots/glass_render_3.png)
