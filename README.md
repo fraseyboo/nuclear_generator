@@ -41,6 +41,10 @@ Higher order harmonics are also supported:
 
 ![Screenshot](plots/higher_orders.png)
 
+Harmonics can be used for coloring or as displacement:
+
+![Screenshot](plots/displacement.png)
+
 Direct exporting to Blender allows for more advanced rendering:
 
 ![Screenshot](plots/glass_render_3.png)
