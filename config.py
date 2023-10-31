@@ -20,4 +20,4 @@ h3 = 0
 sliders = None
 secondary_scalar = None
 dark_mode = False
-add_axes = False
+add_axes = True

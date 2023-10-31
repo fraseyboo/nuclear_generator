@@ -862,12 +862,14 @@ def axes_button_callback(widget, event):
 
 
 
-def add_button(interactor, renderer, callback, icon_path_1, icon_path_2, position=[0.05, 0.05]):
+def add_button(interactor, renderer, callback, icon_path_1, icon_path_2=None, position=[0.05, 0.05], initial_state=True):
 
     r1 = vtk.vtkPNGReader()
     r1.SetFileName(icon_path_1)
     r1.Update()
 
+    if icon_path_2 is None:
+        icon_path_2 = icon_path_1
 
     r2 = vtk.vtkPNGReader()
     r2.SetFileName(icon_path_2)
@@ -882,6 +884,11 @@ def add_button(interactor, renderer, callback, icon_path_1, icon_path_2, positio
     buttonWidget =   vtk.vtkButtonWidget()
     buttonWidget.SetInteractor(interactor)
     buttonWidget.SetRepresentation(buttonRepresentation)
+
+    if initial_state:
+        buttonWidget.GetRepresentation().SetState(1)
+    else:
+        buttonWidget.GetRepresentation().SetState(0)
 
     # // Place the widget. Must be done after a render so that the
     # // viewport is defined..
@@ -903,6 +910,7 @@ def add_button(interactor, renderer, callback, icon_path_1, icon_path_2, positio
     buttonRepresentation.PlaceWidget(bds)
 
     buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, callback)
+
 
     buttonWidget.On()
 
@@ -1287,8 +1295,8 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
 
     export_button = add_button(renderWindowInteractor, renderer, export_button_callback, 'icons/save.png', 'icons/save.png', [0.05, 0.05])
     reset_button = add_button(renderWindowInteractor, renderer, reset_button_callback, 'icons/reset.png', 'icons/reset.png', [0.05, 0.10])
-    dark_button = add_button(renderWindowInteractor, renderer, dark_button_callback, 'icons/dark_on.png', 'icons/dark_off.png', [0.05, 0.15])
-    axes_button = add_button(renderWindowInteractor, renderer, axes_button_callback, 'icons/axes.png', 'icons/axes.png', [0.05, 0.2])
+    dark_button = add_button(renderWindowInteractor, renderer, dark_button_callback, 'icons/dark_on.png', 'icons/dark_off.png', [0.05, 0.15], initial_state=config.dark_mode)
+    axes_button = add_button(renderWindowInteractor, renderer, axes_button_callback, 'icons/axes.png', 'icons/axes.png', [0.05, 0.2], initial_state=config.add_axes)
 
     # cube = interactor_utils.add_indicator_cube(renderWindowInteractor)
     renderWindowInteractor.Start()
