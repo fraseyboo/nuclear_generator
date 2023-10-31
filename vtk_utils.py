@@ -783,7 +783,7 @@ def update_surface(A, b2, m2, b3, m3, b4, m4):
 
 
 def export_button_callback(widget, event):
-    value = widget.GetRepresentation().GetState()
+    # value = widget.GetRepresentation().GetState()
     renwin = widget.GetCurrentRenderer().GetRenderWindow()
   
     # print("Button pressed!", value)
@@ -919,6 +919,7 @@ def add_reset_button(interactor, renderer):
     buttonRepresentation.PlaceWidget(bds)
 
     buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, reset_button_callback)
+
     # buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, SliderCallback)
 
     buttonWidget.On()
@@ -965,7 +966,12 @@ def add_dark_button(interactor, renderer):
     buttonRepresentation.SetPlaceFactor(1)
     buttonRepresentation.PlaceWidget(bds)
 
+
+
     buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, dark_button_callback)
+    if config.dark_mode:
+        buttonWidget.GetRepresentation().SetState(1)
+        buttonWidget.Modified()
     # buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, SliderCallback)
 
     buttonWidget.On()

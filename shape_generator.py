@@ -29,6 +29,7 @@ def main():
     parser.add_argument("-H1", "-harmonic1", default=0, type=int, help="Harmonic n")
     parser.add_argument("-H2", "-harmonic2", default=0, type=int, help="Harmonic m")
     parser.add_argument("-H3", "-harmonic3", default=0, help="Harmonic Magnitude")
+    parser.add_argument("-D", "-dark", default=False, action='store_true', help="Dark Mode")
     
     args = parser.parse_args()
     arguments = vars(args)
@@ -43,6 +44,12 @@ def main():
     config.h1 = h1
     config.h2 = h2 
     config.h3 = h3
+
+    config.dark_mode = arguments['D']
+    if config.dark_mode:
+        print('Dark mode enabled')
+
+
 
     if (h2 != 0):
         secondary_scalar = physics_utils.generate_spherical_harmonic(n=h1,m=h2, granularity=mesh_granularity, verbose=True)
