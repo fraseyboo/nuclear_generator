@@ -11,10 +11,11 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
       expects: renderWindowInteractor, render_camera, renderWindow
     """
 
-    def __init__(self, parent, camera, renderer):
+    def __init__(self, parent, camera, renderer, render_window):
         self.parent = parent
         self.camera = camera
         self.renderer = renderer
+        self.render_window = render_window
 
         self.verbose = False
         self.auto_up = True
@@ -39,7 +40,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.camera.SetPosition(tuple(new))
 
-        self.renderer.Render()
+        self.render_window.Render()
         return
 
 
@@ -55,7 +56,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.camera.SetPosition(tuple(new))
         
-        self.renderer.Render()
+        self.render_window.Render()
         return
 
 
@@ -104,7 +105,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.camera.SetPosition(tuple(new))
 
-        self.renderer.Render()
+        self.render_window.Render()
         return
 
 
@@ -153,7 +154,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.camera.SetPosition(tuple(new))
 
-        self.renderer.Render()
+        self.render_window.Render()
         return
 
 
@@ -205,7 +206,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.camera.SetPosition(tuple(new))
 
-        self.renderer.Render()
+        self.render_window.Render()
         return
 
 
@@ -254,7 +255,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
 
         self.camera.SetPosition(tuple(new))
 
-        self.renderer.Render()
+        self.render_window.Render()
         return
 
 
@@ -263,7 +264,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
         w2if = vtk.vtkWindowToImageFilter()
   
         w2if.SetScale(scale)
-        w2if.SetInput(self.renderer)
+        w2if.SetInput(self.render_window)
         w2if.Update()
 
         writer = vtk.vtkPNGWriter()
@@ -338,22 +339,22 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
             # print(projection_mode)
             print('Camera set to Parallel Projection')
 
-        self.renderer.Render()
+        self.render_window.Render()
 
     def switch_smoothing(self):
 
 
-        renwin = actors = self.renderer
-        renderers = renwin.GetRenderers()
-        # total_renderers = renderers.GetNumberOfItems()
+        # renwin = actors = self.render_window
+        # renderers = renwin.GetRenderers()
+        # # total_renderers = renderers.GetNumberOfItems()
 
-        renderers.InitializeObjectBase()
-        renderers.InitTraversal()
+        # renderers.InitializeObjectBase()
+        # renderers.InitTraversal()
 
-        # for i in range(total_renderers-1):
+        # # for i in range(total_renderers-1):
 
-        renderer = renderers.GetNextItem()
-        pbr_enabled = renderer.GetUseImageBasedLighting()
+        # render_window = renderers.GetNextItem()
+        pbr_enabled = self.renderer.GetUseImageBasedLighting()
 
         if self.smoothing == 'smooth':
             print('Setting smoothing to flat')
@@ -369,7 +370,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
             print('setting smoothing to gourand')
             self.smoothing = 'smooth'
 
-        actors = renderer.GetActors()
+        actors = self.renderer.GetActors()
         actors.InitializeObjectBase()
         actors.InitTraversal()
 
@@ -389,7 +390,7 @@ class MyInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
                     else:
                         actor.GetProperty().SetInterpolationToFlat()
 
-        self.renderer.Render()
+        self.render_window.Render()
 
 
 def add_indicator_cube(interactor):
@@ -415,14 +416,14 @@ def add_indicator_cube(interactor):
 
     return marker
 
-def add_camera_widget(renderer):
+def add_camera_widget(render_window):
     cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
-    cam_orient_manipulator.SetParentRenderer(renderer)
+    cam_orient_manipulator.SetParentRenderer(render_window)
     # Enable the widget.
     cam_orient_manipulator.On()
     return cam_orient_manipulator
 
-def set_passes(renderer, use_ssao=False):
+def set_passes(render_window, use_ssao=False):
 
 
 
@@ -437,7 +438,7 @@ def set_passes(renderer, use_ssao=False):
     # opaque passes
     if use_ssao:
 
-        bounds = np.asarray(renderer.ComputeVisiblePropBounds())
+        bounds = np.asarray(render_window.ComputeVisiblePropBounds())
 
         b_r = np.linalg.norm([bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]])
 
@@ -483,6 +484,6 @@ def set_passes(renderer, use_ssao=False):
 
     # overlayP.SetDelegatePass(fxaaP)
 
-    renderer.SetPass(camP)
+    render_window.SetPass(camP)
 
-    return renderer
+    return render_window

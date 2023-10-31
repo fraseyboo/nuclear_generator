@@ -17,17 +17,19 @@ import interactor_utils
 import physics_utils
 
 
-def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
+def vtk_render():
 
+
+    phi, theta = np.mgrid[0:2*np.pi:config.granularity*1j, 0:np.pi:config.granularity*1j]
 
     # print(globals()["savename"])
-    r = physics_utils.calculate_r(A, beta2, m2, beta3, m3, beta4, m4, theta)
+    r = physics_utils.calculate_r(config.A, config.B2, config.M2, config.B3, config.M3, config.B4, config.M4, theta, phi)
 
     if config.secondary_scalar is not None: 
         r += (config.secondary_scalar.T) * config.h3
 
-    initial_values=dict()
-    initial_values.update({'A':A, 'b2':beta2, 'b3':beta3, 'b4':beta4, 'm2':m2, 'm3':m3, 'm4':m4})
+    config.initial_values=dict()
+    config.initial_values.update({'A':config.A, 'b2':config.B2, 'b3':config.B3, 'b4':config.B4, 'm2':config.M2, 'm3':config.M3, 'm4':config.M4})
 
     print('press \'r\' to reset camera')
     print('press \'o\' to toggle orthogonal projection')
@@ -43,7 +45,7 @@ def vtk_render(A, beta2, beta3, beta4, m2, m3, m4, theta, phi):
     actor_dict = dict()
     actor_dict.update({'shape': nuclear_shape})
     
-    render_window = render(actors=actor_dict, initial_values=initial_values)
+    render_window = render(actors=actor_dict)
 
     return render_window
 
@@ -791,10 +793,7 @@ def update_surface(A, b2, m2, b3, m3, b4, m4):
 
 
 def export_button_callback(widget, event):
-    # value = widget.GetRepresentation().GetState()
     renwin = widget.GetCurrentRenderer().GetRenderWindow()
-  
-    # print("Button pressed!", value)
     write_gltf(renwin)
     return
 
@@ -860,9 +859,44 @@ def axes_button_callback(widget, event):
 
     surface = update_surface(A, b2, m2, b3, m3, b4, m4)
 
+def render_style_button_callback(widget, event):
+
+    value = widget.GetRepresentation().GetState()
+
+    if value == 0:
+        smoothing = 'flat'
+    elif value == 1:
+        smoothing = 'smooth'
+    elif value == 2:
+        smoothing = 'pbr'
+
+    print('Setting smoothing to %s' % smoothing)
+
+    actors = renderer.GetActors()
+    actors.InitializeObjectBase()
+    actors.InitTraversal()
+
+    total_actors = actors.GetNumberOfItems()
+
+    for j in range(total_actors):
+        actor = actors.GetNextActor()
+        actor_name = actor.GetObjectName()
+        if actor_name is not None:
+            if actor_name.startswith('surface'):
+                if smoothing == 'smooth':
+                    actor.GetProperty().SetInterpolationToGouraud()
+                elif smoothing == 'pbr':
+                    actor.GetProperty().SetMetallic(1)
+                    actor.GetProperty().SetRoughness(0)
+                    actor.GetProperty().SetInterpolationToPBR()
+                else:
+                    actor.GetProperty().SetInterpolationToFlat()
+
+    return
 
 
-def add_button(interactor, renderer, callback, icon_path_1, icon_path_2=None, position=[0.05, 0.05], initial_state=True):
+
+def add_button(interactor, renderer, callback, icon_path_1, icon_path_2=None, position=[0.05, 0.05], initial_state=True, icon_path_3=None):
 
     r1 = vtk.vtkPNGReader()
     r1.SetFileName(icon_path_1)
@@ -875,18 +909,34 @@ def add_button(interactor, renderer, callback, icon_path_1, icon_path_2=None, po
     r2.SetFileName(icon_path_2)
     r2.Update()
 
-    buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D() 
-    buttonRepresentation.SetNumberOfStates(2)
+    buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D()
+    if icon_path_3 is not None:
+        total_states = 3
+        r3 = vtk.vtkPNGReader()
+        r3.SetFileName(icon_path_3)
+        r3.Update()
+    else:
+        total_states = 2
+
+    buttonRepresentation.SetNumberOfStates(total_states)
 
     buttonRepresentation.SetButtonTexture(0, r1.GetOutput())
     buttonRepresentation.SetButtonTexture(1, r2.GetOutput())
+
+    if icon_path_3 is not None:
+        buttonRepresentation.SetButtonTexture(2, r3.GetOutput())
 
     buttonWidget =   vtk.vtkButtonWidget()
     buttonWidget.SetInteractor(interactor)
     buttonWidget.SetRepresentation(buttonRepresentation)
 
-    if initial_state:
-        buttonWidget.GetRepresentation().SetState(1)
+    # print(initial_state)
+
+    if initial_state is not False:
+        if initial_state is True:
+            buttonWidget.GetRepresentation().SetState(1)
+        else:
+            buttonWidget.GetRepresentation().SetState(initial_state)
     else:
         buttonWidget.GetRepresentation().SetState(0)
 
@@ -940,11 +990,13 @@ def reset_sliders(renderer):
     renderer.Render()
 
 
-def add_sliders(interactor, renderer, initial_values=None):
+def add_sliders(interactor, renderer):
 
     global sliders
 
     sliders = dict()
+
+    initial_values = config.initial_values
 
     sw_p = SliderProperties()
     sw_p.initial_values = initial_values
@@ -1114,7 +1166,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_colorbar=True, theta=None, use_PBR=True, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_colorbar=True, rendering_style=config.rendering_style, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -1139,34 +1191,33 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         renderer.SetUseDepthPeeling(1)
         renderer.SetMaximumNumberOfPeels(10)
 
-        if use_PBR:
-            cube_path = 'cubemap'
-            use_hdr=False
-            if use_hdr: 
-                print('using HDR')
-                reader = vtk.vtkHDRReader()
-                reader.SetFileName(cube_path + os.sep + 'lab.hdr')
-                texture = vtk.vtkTexture()
-                texture.SetColorModeToDirectScalars()
-                texture.SetInputConnection(reader.GetOutputPort())
-                texture.MipmapOn()
-                texture.InterpolateOn()
-                renderer.UseSphericalHarmonicsOn()
-                renderer.SetEnvironmentTexture(texture, True)
+
+
+        cube_path = 'cubemap'
+        use_hdr=False
+        if use_hdr: 
+            print('using HDR')
+            reader = vtk.vtkHDRReader()
+            reader.SetFileName(cube_path + os.sep + 'lab.hdr')
+            texture = vtk.vtkTexture()
+            texture.SetColorModeToDirectScalars()
+            texture.SetInputConnection(reader.GetOutputPort())
+            texture.MipmapOn()
+            texture.InterpolateOn()
+            renderer.UseSphericalHarmonicsOn()
+            renderer.SetEnvironmentTexture(texture, True)
+            renderer.UseImageBasedLightingOn()
+
+        else:
+            if os.path.exists(cube_path + os.sep + 'nx.png'):
+                cubemap = ReadCubeMap(cube_path, '/', '.png', 2)
+                renderer.UseSphericalHarmonicsOff()
+                renderer.SetEnvironmentTexture(cubemap, True)
                 renderer.UseImageBasedLightingOn()
 
             else:
-                if os.path.exists(cube_path + os.sep + 'nx.png'):
-                    cubemap = ReadCubeMap(cube_path, '/', '.png', 2)
-                    renderer.UseSphericalHarmonicsOff()
-                    renderer.SetEnvironmentTexture(cubemap, True)
-                    renderer.UseImageBasedLightingOn()
-
-
-
-                else:
-                    print('Could not find cubemap')
-                    use_PBR = False
+                print('Could not find cubemap')
+                use_PBR = False
             # renderer.SetEnvironmentCubeMap(cubemap)
 
         # if add_skybox:
@@ -1181,6 +1232,12 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
         #     renderer.AddActor(skyboxActor)
 
 
+        if rendering_style == 2:
+            use_PBR = True
+        else:
+            use_PBR = False
+            if rendering_style == 0:
+                renderer
 
 
         if actors is not None:
@@ -1203,64 +1260,47 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                 for actor in actors.values():
                     if isinstance(actor, list):
                         for sub_actor in actor:
-                            if use_PBR:
-                                renderer.AddActor(add_PBR(sub_actor))
-                            else:
-                                renderer.AddActor(sub_actor)
+                            renderer.AddActor(sub_actor)
                             if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
                                 cb = colorbar(sub_actor, interactor=renderWindowInteractor)
-                                # renderer.AddActor(cb)
+
                     elif type(actor) is list:
                         for sub_actor in actor:
-                            if use_PBR:
-                                renderer.AddActor(add_PBR(sub_actor))
-                            else:
-                                renderer.AddActor(sub_actor)
+                            renderer.AddActor(sub_actor)
                             if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
                                 cb = colorbar(sub_actor, interactor=renderWindowInteractor)
-                                # renderer.AddActor(cb)
+
                     elif isinstance(actor, dict):
                         for sub_actor in actor.values():
-                            if use_PBR:
-                                renderer.AddActor(add_PBR(sub_actor))
-                            else:
-                                renderer.AddActor(sub_actor)
+                            renderer.AddActor(sub_actor)
                             if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
                                 cb = colorbar(sub_actor, interactor=renderWindowInteractor)
-                                # renderer.AddActor(cb)
+
                     elif isinstance(actor, tuple):
                         for sub_actor in actor:
-                            if use_PBR:
-                                renderer.AddActor(add_PBR(sub_actor))
-                            else:
-                                renderer.AddActor(sub_actor)
+                            renderer.AddActor(sub_actor)
                             if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
                                 cb = colorbar(sub_actor, interactor=renderWindowInteractor)
-                                # renderer.AddActor(cb)
 
                     else:
-                        if use_PBR:
-                            renderer.AddActor(add_PBR(actor))
-                        else:
-                            renderer.AddActor(actor)
+                        renderer.AddActor(actor)
                         if config.add_axes:
                             axes = make_axes(actor, renderer)
                             renderer.AddActor(axes)
                         if add_colorbar:
                             cb = colorbar(actor, interactor=renderWindowInteractor)
-                            # renderer.AddActor(cb)
 
         else:
             if use_PBR:
@@ -1275,15 +1315,38 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                 renderer.AddActor(cb)
 
 
+        actors = renderer.GetActors()
+        actors.InitializeObjectBase()
+        actors.InitTraversal()
+
+        total_actors = actors.GetNumberOfItems()
+
+        
+        for j in range(total_actors):
+            actor = actors.GetNextActor()
+            actor_name = actor.GetObjectName()
+            if actor_name is not None:
+                if actor_name.startswith('surface'):
+                    if config.rendering_style == 0:
+                        actor.GetProperty().SetInterpolationToFlat()
+                    if config.rendering_style == 1:
+                        actor.GetProperty().SetInterpolationToGouraud()
+                    elif config.rendering_style == 2:
+                        actor.GetProperty().SetMetallic(1)
+                        actor.GetProperty().SetRoughness(0)
+                        actor.GetProperty().SetInterpolationToPBR()
+
         renderer.ResetCamera()
         render_camera.Azimuth(90)
         render_camera.SetViewUp(0,0,1)
 
-        renderWindowInteractor.SetInteractorStyle(interactor_utils.MyInteractorStyle(renderWindowInteractor, render_camera, renderWindow))
+        renderWindowInteractor.SetInteractorStyle(interactor_utils.MyInteractorStyle(renderWindowInteractor, render_camera, renderer, renderWindow))
 
-        sliders = add_sliders(renderWindowInteractor, renderer, initial_values=initial_values)
+        sliders = add_sliders(renderWindowInteractor, renderer)
 
         config.sliders = sliders
+
+
     # cam_orient_manipulator = vtk.vtkCameraOrientationWidget()
     # cam_orient_manipulator.SetParentRenderer(renderer)
     # # Enable the widget.
@@ -1297,8 +1360,9 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
     reset_button = add_button(renderWindowInteractor, renderer, reset_button_callback, 'icons/reset.png', 'icons/reset.png', [0.05, 0.10])
     dark_button = add_button(renderWindowInteractor, renderer, dark_button_callback, 'icons/dark_on.png', 'icons/dark_off.png', [0.05, 0.15], initial_state=config.dark_mode)
     axes_button = add_button(renderWindowInteractor, renderer, axes_button_callback, 'icons/axes.png', 'icons/axes.png', [0.05, 0.2], initial_state=config.add_axes)
+    view_button = add_button(renderWindowInteractor, renderer, render_style_button_callback, 'icons/eye_1.png', 'icons/eye_2.png', icon_path_3='icons/eye_3.png', position=[0.05, 0.25], initial_state=config.rendering_style)
 
-    # cube = interactor_utils.add_indicator_cube(renderWindowInteractor)
+
     renderWindowInteractor.Start()
 
 

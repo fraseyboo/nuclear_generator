@@ -21,3 +21,7 @@ sliders = None
 secondary_scalar = None
 dark_mode = False
 add_axes = True
+
+initial_values = None
+
+rendering_style = 1 # 0 for flat, 1 for smooth, 2 for physically-based rendering
