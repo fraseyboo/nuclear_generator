@@ -14,3 +14,4 @@ M4 = 0
 
 sliders = None
 secondary_scalar = None
+dark_mode = False

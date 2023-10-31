@@ -782,7 +782,7 @@ def update_surface(A, b2, m2, b3, m3, b4, m4):
 
 
 
-def export_button_callback(widget, event, savename='shape.gltf'):
+def export_button_callback(widget, event):
     value = widget.GetRepresentation().GetState()
     renwin = widget.GetCurrentRenderer().GetRenderWindow()
   
@@ -807,6 +807,29 @@ def reset_button_callback(widget, event):
 
     return
 
+def dark_button_callback(widget, event):
+    value = widget.GetRepresentation().GetState()
+    if value == 1:
+        config.dark_mode = True
+        print('Dark mode enabled')
+    else:
+        config.dark_mode = False
+        print('Dark mode disabled')
+
+
+    sliders = config.sliders
+
+    A = int(sliders['A'].GetRepresentation().GetValue())
+    b2 = sliders['Beta 2'].GetRepresentation().GetValue()
+    b3 = sliders['Beta 3'].GetRepresentation().GetValue()
+    b4 = sliders['Beta 4'].GetRepresentation().GetValue()
+    m2 = int(sliders['m2'].GetRepresentation().GetValue())
+    m3 = int(sliders['m3'].GetRepresentation().GetValue())
+    m4 = int(sliders['m4'].GetRepresentation().GetValue())
+
+    update_surface(A, b2, m2, b3, m3, b4, m4)
+
+    return
 
 def add_export_button(interactor, renderer):
 
@@ -896,6 +919,53 @@ def add_reset_button(interactor, renderer):
     buttonRepresentation.PlaceWidget(bds)
 
     buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, reset_button_callback)
+    # buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, SliderCallback)
+
+    buttonWidget.On()
+
+    return buttonWidget
+
+def add_dark_button(interactor, renderer):
+
+    r1 = vtk.vtkPNGReader()
+    r1.SetFileName('icons/dark_on.png')
+    r1.Update()
+
+
+    r2 = vtk.vtkPNGReader()
+    r2.SetFileName('icons/dark_off.png')
+    r2.Update()
+
+    buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D() 
+    buttonRepresentation.SetNumberOfStates(2)
+
+    buttonRepresentation.SetButtonTexture(0, r1.GetOutput())
+    buttonRepresentation.SetButtonTexture(1, r2.GetOutput())
+
+    buttonWidget =   vtk.vtkButtonWidget()
+    buttonWidget.SetInteractor(interactor)
+    buttonWidget.SetRepresentation(buttonRepresentation)
+
+    # // Place the widget. Must be done after a render so that the
+    # // viewport is defined..
+    # // Here the widget placement is in normalized display coordinates.
+    upperRight = vtk.vtkCoordinate()
+    upperRight.SetCoordinateSystemToNormalizedDisplay()
+    upperRight.SetValue(0.05, 0.15)
+
+    bds = np.zeros(6)
+    sz = 50.0
+    bds[0] = upperRight.GetComputedDisplayValue(renderer)[0] - sz
+    bds[1] = bds[0] + sz
+    bds[2] = upperRight.GetComputedDisplayValue(renderer)[1] - sz
+    bds[3] = bds[2] + sz
+    bds[4] = bds[5] = 0.0
+
+    # // Scale to 1, default is .5
+    buttonRepresentation.SetPlaceFactor(1)
+    buttonRepresentation.PlaceWidget(bds)
+
+    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, dark_button_callback)
     # buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, SliderCallback)
 
     buttonWidget.On()
@@ -1282,6 +1352,8 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
     export_button.On()
     reset_button = add_reset_button(renderWindowInteractor, renderer)
     reset_button.On()
+    ppt_button = add_dark_button(renderWindowInteractor, renderer)
+    ppt_button.On()
 
     # cube = interactor_utils.add_indicator_cube(renderWindowInteractor)
     renderWindowInteractor.Start()

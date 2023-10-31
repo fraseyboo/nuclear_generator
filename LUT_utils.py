@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib
 import vtk
+import config
 
 def make_colormap(c_range=(0,1), color='viridis', cnum=100, invert=False, verbose=False):
 
@@ -1353,6 +1354,9 @@ def make_colormap(c_range=(0,1), color='viridis', cnum=100, invert=False, verbos
 def make_LUT(colormap='viridis', invert=False, verbose=False, c_range=(0,1), nan_color=(1,0,0,1), scale_type='linear'):
 
     colormap = make_colormap(c_range=c_range, color=colormap, invert=invert, verbose=verbose)
+
+    if config.dark_mode:
+        colormap = colormap * [1, 0.1, 0.1, 0.1]
 
     colorSeries = vtk.vtkColorSeries()
     colorSeries.SetNumberOfColors(colormap.shape[0])
