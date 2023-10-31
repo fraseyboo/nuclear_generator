@@ -12,6 +12,12 @@ M2 = 0
 M3 = 0
 M4 = 0
 
+granularity = 50
+h1 = 0
+h2 = 0
+h3 = 0
+
 sliders = None
 secondary_scalar = None
 dark_mode = False
+add_axes = False

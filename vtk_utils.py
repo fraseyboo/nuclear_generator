@@ -747,7 +747,6 @@ def update_surface(A, b2, m2, b3, m3, b4, m4):
     if config.secondary_scalar is not None: 
         r += (config.secondary_scalar.T) * config.h3
 
-
     old_shape = renderer.GetActors().GetItemAsObject(0)
     actors = renderer.GetActors() 
 
@@ -756,6 +755,7 @@ def update_surface(A, b2, m2, b3, m3, b4, m4):
     actors.InitializeObjectBase()
     actors.InitTraversal()
     source_actor = None
+    axes_actor = None
 
     total_actors = actors.GetNumberOfItems()
     for j in range(total_actors):
@@ -769,16 +769,24 @@ def update_surface(A, b2, m2, b3, m3, b4, m4):
                     source_actor = actor
         if source_actor is not None:
             if isinstance(actor, vtk.vtkCubeAxesActor):
+                axes_actor = actor
                 actor.SetBounds(source_actor.GetBounds())
 
+    if config.add_axes and (axes_actor is None):
+        axes = make_axes(source_actor, renderer)
+        renderer.AddActor(axes)
 
-    # _ = add_textures_to_actor(source_actor, material='rock')
+    elif (not config.add_axes) and (axes_actor is not None):
+        axes_actor.SetVisibility(0)
+
+    elif (config.add_axes) and (axes_actor is not None):
+        axes_actor.SetVisibility(1)
 
     renderer.Modified()
-
     scalar_bar_widget.GetScalarBarActor().SetLookupTable(source_actor.GetMapper().GetLookupTable())
-    # .Modified()
     scalar_bar_widget.Modified()
+
+    return source_actor
 
 
 
@@ -831,15 +839,38 @@ def dark_button_callback(widget, event):
 
     return
 
-def add_export_button(interactor, renderer):
+def axes_button_callback(widget, event):
+    value = widget.GetRepresentation().GetState()
+    if value == 1:
+        config.add_axes = True
+        print('Axes enabled')
+    else:
+        config.add_axes = False
+        print('Axes disabled')
+
+    sliders = config.sliders
+
+    A = int(sliders['A'].GetRepresentation().GetValue())
+    b2 = sliders['Beta 2'].GetRepresentation().GetValue()
+    b3 = sliders['Beta 3'].GetRepresentation().GetValue()
+    b4 = sliders['Beta 4'].GetRepresentation().GetValue()
+    m2 = int(sliders['m2'].GetRepresentation().GetValue())
+    m3 = int(sliders['m3'].GetRepresentation().GetValue())
+    m4 = int(sliders['m4'].GetRepresentation().GetValue())
+
+    surface = update_surface(A, b2, m2, b3, m3, b4, m4)
+
+
+
+def add_button(interactor, renderer, callback, icon_path_1, icon_path_2, position=[0.05, 0.05]):
 
     r1 = vtk.vtkPNGReader()
-    r1.SetFileName('icons/save.png')
+    r1.SetFileName(icon_path_1)
     r1.Update()
 
 
     r2 = vtk.vtkPNGReader()
-    r2.SetFileName('icons/save.png')
+    r2.SetFileName(icon_path_2)
     r2.Update()
 
     buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D() 
@@ -857,7 +888,7 @@ def add_export_button(interactor, renderer):
     # // Here the widget placement is in normalized display coordinates.
     upperRight = vtk.vtkCoordinate()
     upperRight.SetCoordinateSystemToNormalizedDisplay()
-    upperRight.SetValue(0.05, 0.05)
+    upperRight.SetValue(position[0], position[1])
 
     bds = np.zeros(6)
     sz = 50.0
@@ -871,112 +902,12 @@ def add_export_button(interactor, renderer):
     buttonRepresentation.SetPlaceFactor(1)
     buttonRepresentation.PlaceWidget(bds)
 
-    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, export_button_callback)
+    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, callback)
 
     buttonWidget.On()
 
     return buttonWidget
 
-
-def add_reset_button(interactor, renderer):
-
-    r1 = vtk.vtkPNGReader()
-    r1.SetFileName('icons/reset.png')
-    r1.Update()
-
-
-    r2 = vtk.vtkPNGReader()
-    r2.SetFileName('icons/reset.png')
-    r2.Update()
-
-    buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D() 
-    buttonRepresentation.SetNumberOfStates(2)
-
-    buttonRepresentation.SetButtonTexture(0, r1.GetOutput())
-    buttonRepresentation.SetButtonTexture(1, r2.GetOutput())
-
-    buttonWidget =   vtk.vtkButtonWidget()
-    buttonWidget.SetInteractor(interactor)
-    buttonWidget.SetRepresentation(buttonRepresentation)
-
-    # // Place the widget. Must be done after a render so that the
-    # // viewport is defined..
-    # // Here the widget placement is in normalized display coordinates.
-    upperRight = vtk.vtkCoordinate()
-    upperRight.SetCoordinateSystemToNormalizedDisplay()
-    upperRight.SetValue(0.05, 0.1)
-
-    bds = np.zeros(6)
-    sz = 50.0
-    bds[0] = upperRight.GetComputedDisplayValue(renderer)[0] - sz
-    bds[1] = bds[0] + sz
-    bds[2] = upperRight.GetComputedDisplayValue(renderer)[1] - sz
-    bds[3] = bds[2] + sz
-    bds[4] = bds[5] = 0.0
-
-    # // Scale to 1, default is .5
-    buttonRepresentation.SetPlaceFactor(1)
-    buttonRepresentation.PlaceWidget(bds)
-
-    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, reset_button_callback)
-
-    # buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, SliderCallback)
-
-    buttonWidget.On()
-
-    return buttonWidget
-
-def add_dark_button(interactor, renderer):
-
-    r1 = vtk.vtkPNGReader()
-    r1.SetFileName('icons/dark_on.png')
-    r1.Update()
-
-
-    r2 = vtk.vtkPNGReader()
-    r2.SetFileName('icons/dark_off.png')
-    r2.Update()
-
-    buttonRepresentation = vtk.vtkTexturedButtonRepresentation2D() 
-    buttonRepresentation.SetNumberOfStates(2)
-
-    buttonRepresentation.SetButtonTexture(0, r1.GetOutput())
-    buttonRepresentation.SetButtonTexture(1, r2.GetOutput())
-
-    buttonWidget =   vtk.vtkButtonWidget()
-    buttonWidget.SetInteractor(interactor)
-    buttonWidget.SetRepresentation(buttonRepresentation)
-
-    # // Place the widget. Must be done after a render so that the
-    # // viewport is defined..
-    # // Here the widget placement is in normalized display coordinates.
-    upperRight = vtk.vtkCoordinate()
-    upperRight.SetCoordinateSystemToNormalizedDisplay()
-    upperRight.SetValue(0.05, 0.15)
-
-    bds = np.zeros(6)
-    sz = 50.0
-    bds[0] = upperRight.GetComputedDisplayValue(renderer)[0] - sz
-    bds[1] = bds[0] + sz
-    bds[2] = upperRight.GetComputedDisplayValue(renderer)[1] - sz
-    bds[3] = bds[2] + sz
-    bds[4] = bds[5] = 0.0
-
-    # // Scale to 1, default is .5
-    buttonRepresentation.SetPlaceFactor(1)
-    buttonRepresentation.PlaceWidget(bds)
-
-
-
-    buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, dark_button_callback)
-    if config.dark_mode:
-        buttonWidget.GetRepresentation().SetState(1)
-        buttonWidget.Modified()
-    # buttonWidget.AddObserver(vtk.vtkCommand.StateChangedEvent, SliderCallback)
-
-    buttonWidget.On()
-
-    return buttonWidget
 
 def reset_sliders(renderer):
 
@@ -1175,7 +1106,7 @@ def add_PBR(actor, metallic_factor=1, roughness_factor=0, verbose=True):
 
     return actor
 
-def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_axes=True, add_colorbar=True, theta=None, use_PBR=True, initial_values=None):
+def render(actors=None, background_color='White', window_size=(1200, 1200), multiview=False, add_colorbar=True, theta=None, use_PBR=True, initial_values=None):
 
     renderWindow = vtk.vtkRenderWindow()
     renderWindowInteractor = vtk.vtkRenderWindowInteractor()
@@ -1252,7 +1183,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                         renderer.AddActor(add_PBR(actor))
                     else:
                         renderer.AddActor(actor)
-                    if add_axes:
+                    if config.add_axes:
                         axes = make_axes(actor, renderer)
                         renderer.AddActor(axes)
                     if add_colorbar:
@@ -1268,7 +1199,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                                 renderer.AddActor(add_PBR(sub_actor))
                             else:
                                 renderer.AddActor(sub_actor)
-                            if add_axes:
+                            if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
@@ -1280,7 +1211,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                                 renderer.AddActor(add_PBR(sub_actor))
                             else:
                                 renderer.AddActor(sub_actor)
-                            if add_axes:
+                            if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
@@ -1292,7 +1223,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                                 renderer.AddActor(add_PBR(sub_actor))
                             else:
                                 renderer.AddActor(sub_actor)
-                            if add_axes:
+                            if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
@@ -1304,7 +1235,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                                 renderer.AddActor(add_PBR(sub_actor))
                             else:
                                 renderer.AddActor(sub_actor)
-                            if add_axes:
+                            if config.add_axes:
                                 axes = make_axes(sub_actor, renderer)
                                 renderer.AddActor(axes)
                             if add_colorbar:
@@ -1316,7 +1247,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                             renderer.AddActor(add_PBR(actor))
                         else:
                             renderer.AddActor(actor)
-                        if add_axes:
+                        if config.add_axes:
                             axes = make_axes(actor, renderer)
                             renderer.AddActor(axes)
                         if add_colorbar:
@@ -1328,7 +1259,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
                 renderer.AddActor(add_PBR(actors))
             else:
                 renderer.AddActor(actors)
-            if add_axes:
+            if config.add_axes:
                 axes = make_axes(actors, renderer)
                 renderer.AddActor(axes)
             if add_colorbar:
@@ -1354,12 +1285,10 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
     renderWindow.SetSize(window_size)
     renderWindow.Render()
 
-    export_button = add_export_button(renderWindowInteractor, renderer)
-    export_button.On()
-    reset_button = add_reset_button(renderWindowInteractor, renderer)
-    reset_button.On()
-    ppt_button = add_dark_button(renderWindowInteractor, renderer)
-    ppt_button.On()
+    export_button = add_button(renderWindowInteractor, renderer, export_button_callback, 'icons/save.png', 'icons/save.png', [0.05, 0.05])
+    reset_button = add_button(renderWindowInteractor, renderer, reset_button_callback, 'icons/reset.png', 'icons/reset.png', [0.05, 0.10])
+    dark_button = add_button(renderWindowInteractor, renderer, dark_button_callback, 'icons/dark_on.png', 'icons/dark_off.png', [0.05, 0.15])
+    axes_button = add_button(renderWindowInteractor, renderer, axes_button_callback, 'icons/axes.png', 'icons/axes.png', [0.05, 0.2])
 
     # cube = interactor_utils.add_indicator_cube(renderWindowInteractor)
     renderWindowInteractor.Start()
