@@ -1193,7 +1193,7 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
 
 
 
-        cube_path = 'cubemap'
+        cube_path = config.base_path + 'cubemap'
         use_hdr=False
         if use_hdr: 
             print('using HDR')
