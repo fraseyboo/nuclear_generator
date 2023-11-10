@@ -1356,11 +1356,11 @@ def render(actors=None, background_color='White', window_size=(1200, 1200), mult
     renderWindow.SetSize(window_size)
     renderWindow.Render()
 
-    export_button = add_button(renderWindowInteractor, renderer, export_button_callback, 'icons/save.png', 'icons/save.png', [0.05, 0.05])
-    reset_button = add_button(renderWindowInteractor, renderer, reset_button_callback, 'icons/reset.png', 'icons/reset.png', [0.05, 0.10])
-    dark_button = add_button(renderWindowInteractor, renderer, dark_button_callback, 'icons/dark_on.png', 'icons/dark_off.png', [0.05, 0.15], initial_state=config.dark_mode)
-    axes_button = add_button(renderWindowInteractor, renderer, axes_button_callback, 'icons/axes.png', 'icons/axes.png', [0.05, 0.2], initial_state=config.add_axes)
-    view_button = add_button(renderWindowInteractor, renderer, render_style_button_callback, 'icons/eye_1.png', 'icons/eye_2.png', icon_path_3='icons/eye_3.png', position=[0.05, 0.25], initial_state=config.rendering_style)
+    export_button = add_button(renderWindowInteractor, renderer, export_button_callback, config.base_path + 'icons/save.png', config.base_path + 'icons/save.png', [0.05, 0.05])
+    reset_button = add_button(renderWindowInteractor, renderer, reset_button_callback, config.base_path + 'icons/reset.png', config.base_path + 'icons/reset.png', [0.05, 0.10])
+    dark_button = add_button(renderWindowInteractor, renderer, dark_button_callback, config.base_path + 'icons/dark_on.png', config.base_path + 'icons/dark_off.png', [0.05, 0.15], initial_state=config.dark_mode)
+    axes_button = add_button(renderWindowInteractor, renderer, axes_button_callback, config.base_path + 'icons/axes.png', config.base_path + 'icons/axes.png', [0.05, 0.2], initial_state=config.add_axes)
+    view_button = add_button(renderWindowInteractor, renderer, render_style_button_callback, config.base_path + 'icons/eye_1.png', config.base_path + 'icons/eye_2.png', icon_path_3= config.base_path + 'icons/eye_3.png', position=[0.05, 0.25], initial_state=config.rendering_style)
 
 
     renderWindowInteractor.Start()

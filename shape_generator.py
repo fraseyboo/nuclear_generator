@@ -59,9 +59,9 @@ def main():
     config.B2 = float(arguments['B2'])
     config.B3 = float(arguments['B3'])
     config.B4 = float(arguments['B4'])
-    config.M2 = float(arguments['M2'])
-    config.M3 = float(arguments['M3'])
-    config.M4 = float(arguments['M4'])
+    config.M2 = int(arguments['M2'])
+    config.M3 = int(arguments['M3'])
+    config.M4 = int(arguments['M4'])
 
     frontend = arguments['F']
     config.savename = arguments['S']
